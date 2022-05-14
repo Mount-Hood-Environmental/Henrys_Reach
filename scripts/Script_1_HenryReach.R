@@ -9,7 +9,8 @@ pittag_data <- read_csv("data/0ll_cleaned_010122_050122.csv")
 
 #Create Plot of Litz Cord Locations 
 leaflet(litz_locs) %>%
-  addProviderTiles('Esri.WorldGrayCanvas') %>%
+  addTiles() %>%
+  #addProviderTiles('Esri.WorldGrayCanvas') %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Reader,
              radius = 5,
              color = "red",
@@ -53,7 +54,29 @@ ggplot(pittag_data_nodes_4_18, aes(x=node)) +
          x= "Month") +
     scale_x_discrete(limit = c("Jan","Feb","Mar","Apr"))
                    
-    
+#Daily Detection ---------------------
+
+pittag_data_month <- pittag_data %>% 
+  mutate(SC = ifelse(node %in% 1:2,1,  # Create a column that combines nodes into
+              ifelse(node %in% 4:5,2,  # A single side channel (e.g. node 1&2 = SC 1)
+              ifelse(node %in% 6:7,3,
+              ifelse(node %in% 8:9,4,
+              ifelse(node %in% 10:11,5,
+              ifelse(node %in% 12:13,6,0))))))) %>%
+  filter(SC != 0)
+pittag_data_month$day <- format(pittag_data_month$min_det, format = "%d")
+pittag_data_month$day <- type.convert(pittag_data_month$day)
+
+
+ ggplot(pittag_data_month, aes(x=day, fill = as.factor(SC))) +
+  geom_bar() + 
+  facet_wrap(~month, scales = "free") +
+  labs(title = "Daily Detections/Month", x="Day of the Month",
+       y = "Number of detections", fill = "Side Channel" ) +
+  scale_x_continuous(limits= c(1,31),breaks = seq(1,31, by = 1))
+ 
+ 
+  
   
 
  
