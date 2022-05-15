@@ -1,17 +1,25 @@
 # Load Packages and Data ------
 library(tidyverse)
+library(lubridate)
 library(sf)
 library(mapview)
 library(leaflet)
+library(scales)
 litz_locs <- read_csv("data/Litz_Locations.csv")
 pittag_data <- read_csv("data/0ll_cleaned_010122_050122.csv")
 
 
 #Create Plot of Litz Cord Locations 
-leaflet(litz_locs) %>%
+litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "HRSC 1", "NA", 
+                                      "HRSC 2", "NA","HRSC 3", "NA",
+                                      "HRSC 4", "NA", "HRSC 5", "NA", "HRSC 6", 
+                                      "NA", "NA", "HRSC 7", "HRSC 8")) %>%
+                filter(Side_Channel != "NA")
+
+leaflet(litz_locs_sc) %>%
   addTiles() %>%
   #addProviderTiles('Esri.WorldGrayCanvas') %>%
-  addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Reader,
+  addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
              radius = 5,
              color = "red",
              labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
@@ -55,25 +63,36 @@ ggplot(pittag_data_nodes_4_18, aes(x=node)) +
     scale_x_discrete(limit = c("Jan","Feb","Mar","Apr"))
                    
 #Daily Detection ---------------------
+start <- as.Date("2022-04-01") 
+end   <- as.Date("2022-04-14")
 
 pittag_data_month <- pittag_data %>% 
-  mutate(SC = ifelse(node %in% 1:2,1,  # Create a column that combines nodes into
-              ifelse(node %in% 4:5,2,  # A single side channel (e.g. node 1&2 = SC 1)
-              ifelse(node %in% 6:7,3,
-              ifelse(node %in% 8:9,4,
-              ifelse(node %in% 10:11,5,
-              ifelse(node %in% 12:13,6,0))))))) %>%
-  filter(SC != 0)
+  mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",  # Create a column that combines nodes into
+              ifelse(node ==   3,     "SRSC 2",       
+              ifelse(node %in% 4:5,   "HRSC 1",  # A single side channel (e.g. node 1&2 = SCSC 1)
+              ifelse(node %in% 6:7,   "HRSC 2",
+              ifelse(node %in% 8:9,   "HRSC 3",
+              ifelse(node %in% 10:11, "HRSC 4",
+              ifelse(node %in% 12:13, "HRSC 5",
+              ifelse(node %in% 14:16, "HRSC 6",
+              ifelse(node ==   17,    "HRSC 7", 
+              ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
+  mutate(project = ifelse(SC %in% c("SRSC 1", "SRSC 2"), "SRSC","HRSC")) %>%
+  filter(between(as.Date(min_det),start,end) 
+         , project == "HRSC")
+
+
 pittag_data_month$day <- format(pittag_data_month$min_det, format = "%d")
 pittag_data_month$day <- type.convert(pittag_data_month$day)
 
 
- ggplot(pittag_data_month, aes(x=day, fill = as.factor(SC))) +
+ ggplot(pittag_data_month, aes(x=as.Date(min_det), fill = as.factor(SC))) +
   geom_bar() + 
   facet_wrap(~month, scales = "free") +
   labs(title = "Daily Detections/Month", x="Day of the Month",
        y = "Number of detections", fill = "Side Channel" ) +
-  scale_x_continuous(limits= c(1,31),breaks = seq(1,31, by = 1))
+  scale_x_date(date_breaks = "1 day", labels = date_format("%d"),
+               limits = c(start,end))
  
  
   

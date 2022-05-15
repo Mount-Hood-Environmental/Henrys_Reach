@@ -1,5 +1,6 @@
 # Load Packages and Data ------
 library(tidyverse)
+library(lubridate)
 library(sf)
 library(mapview)
 library(leaflet)
@@ -22,7 +23,6 @@ ui <- fluidPage(
   ),
   
   column(5,
-    selectInput('project','Enter Project',choices = c("HRSC","SRSC")),
     leafletOutput('SC_map')
   )
  )
@@ -32,19 +32,14 @@ server <- function(input,output,session){
   
   output$bar_graph <- renderPlot({
     
-    pittag_data_month <- pittag_data %>% 
-      mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",  # Create a column that combines nodes into
-                  ifelse(node ==   3,     "SRSC 2",  # A single side channel (e.g. node 1&2 = SCSC 1)     
-                  ifelse(node %in% 4:5,   "HRSC 1",  
-                  ifelse(node %in% 6:7,   "HRSC 2",
-                  ifelse(node %in% 8:9,   "HRSC 3",
-                  ifelse(node %in% 10:11, "HRSC 4",
-                  ifelse(node %in% 12:13, "HRSC 5",
-                  ifelse(node %in% 14:16, "HRSC 6",
-                  ifelse(node ==   17,    "HRSC 7", 
-                  ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
-      mutate(project = ifelse(SC %in% c("SRSC 1", "SRSC 2"), "SRSC","HRSC")) %>%
-      filter(month == input$month, project == input$project) 
+    pittag_data_month <- pittag_data %>% filter(month == input$month) %>%
+      mutate(SC = ifelse(node %in% 1:2,1,  # Create a column that combines nodes into
+                  ifelse(node %in% 4:5,2,  # A single side channel (e.g. node 1&2 = SC 1)
+                  ifelse(node %in% 6:7,3,
+                  ifelse(node %in% 8:9,4,
+                  ifelse(node %in% 10:11,5,
+                  ifelse(node %in% 12:13,6,0))))))) %>%
+      filter(SC != 0)
     
     ggplot(pittag_data_month, aes(x=day, fill = as.factor(SC))) +
       geom_bar() + 
@@ -55,15 +50,9 @@ server <- function(input,output,session){
  
   output$SC_map <- renderLeaflet({
     
-    litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "HRSC 1", 
-                                                          "NA", "HRSC 2", "NA","HRSC 3", "NA",
-                                                          "HRSC 4", "NA", "HRSC 5", "NA", "HRSC 6", 
-                                                          "NA", "NA", "HRSC 7", "HRSC 8")) %>%
-      filter(Side_Channel != "NA")
-    
-    leaflet(litz_locs_sc) %>%
+    leaflet(litz_locs) %>%
       addTiles() %>%
-      addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+      addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Reader,
                  radius = 5,
                  color = "red",
                  labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
