@@ -17,7 +17,10 @@ ui <- fluidPage(
   titlePanel("Henry's Reach Detection Data"),
   fluidRow(
   column(7,
-  selectInput('month','Enter Month', choices = c("Jan","Feb","Mar","Apr")),
+  sliderInput('daterange','Select Date Range', 
+              min = as.Date(min(pittag_data$min_det)),
+              max = as.Date(max(pittag_data$min_det)),
+              value = c(as.Date("2022-01-01"),as.Date("2022-01-20"))),
   plotOutput('bar_graph')
   ),
   
@@ -44,13 +47,15 @@ server <- function(input,output,session){
                   ifelse(node ==   17,    "HRSC 7", 
                   ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
       mutate(project = ifelse(SC %in% c("SRSC 1", "SRSC 2"), "SRSC","HRSC")) %>%
-      filter(month == input$month, project == input$project) 
+      filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]) 
+             , project == input$project) 
     
-    ggplot(pittag_data_month, aes(x=day, fill = as.factor(SC))) +
+    ggplot(pittag_data_month, aes(x=as.Date(min_det), fill = as.factor(SC))) +
       geom_bar() + 
       labs(title = "Daily Detections/Month", x="Day of the Month",
            y = "Number of detections", fill = "Side Channel" ) +
-      scale_x_continuous(limits= c(1,31),breaks = seq(1,31, by = 1)) 
+      scale_x_date(date_breaks = "1 day", labels = date_format("%d"),
+                   limits = c(input$daterange[1],input$daterange[2]))
   })
  
   output$SC_map <- renderLeaflet({
