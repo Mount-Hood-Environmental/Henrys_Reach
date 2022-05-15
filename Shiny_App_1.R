@@ -15,11 +15,20 @@ pittag_data$day <- type.convert(pittag_data$day)
 
 ui <- fluidPage(
   titlePanel("Henry's Reach Detection Data"),
+  fluidRow(
+  column(7,
   selectInput('month','Enter Month', choices = c("Jan","Feb","Mar","Apr")),
   plotOutput('bar_graph')
+  ),
+  
+  column(5,
+    leafletOutput('SC_map')
+  )
+ )
 )
 
 server <- function(input,output,session){
+  
   output$bar_graph <- renderPlot({
     
     pittag_data_month <- pittag_data %>% filter(month == input$month) %>%
@@ -36,7 +45,17 @@ server <- function(input,output,session){
       labs(title = "Daily Detections/Month", x="Day of the Month",
            y = "Number of detections", fill = "Side Channel" ) +
       scale_x_continuous(limits= c(1,31),breaks = seq(1,31, by = 1)) 
-   
+  })
+ 
+  output$SC_map <- renderLeaflet({
+    
+    leaflet(litz_locs) %>%
+      addTiles() %>%
+      addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Reader,
+                 radius = 5,
+                 color = "red",
+                 labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+                                             textsize = "10px",)) 
   })
 }
 shinyApp(ui=ui,server=server)
