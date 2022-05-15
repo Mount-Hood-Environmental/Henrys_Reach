@@ -8,11 +8,6 @@ library(shiny)
 litz_locs <- read_csv("data/Litz_Locations.csv")
 pittag_data <- read_csv("data/0ll_cleaned_010122_050122.csv")
 
-pittag_data$month <- format(pittag_data$min_det, format = "%b")
-pittag_data$month <- factor(pittag_data$month, levels = c("Jan","Feb","Mar","Apr"))
-pittag_data$day <- format(pittag_data$min_det, format = "%d")
-pittag_data$day <- type.convert(pittag_data$day)
-
 ui <- fluidPage(
   titlePanel("Henry's Reach Detection Data"),
   fluidRow(
