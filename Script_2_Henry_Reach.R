@@ -1,3 +1,11 @@
+# BO - It's good practice to provide quick summary information about the script at the top
+
+# Authors: Bridger Bertram
+# Purpose:  Fill in
+# Created: Fill in
+# Last Modified: Fill in
+# Notes:
+
 #load packages and data -----
 library(tidyverse)
 library(lubridate)
@@ -7,7 +15,8 @@ library(leaflet)
 library(scales)
 
 litz_locs <- read_csv("Litz_Locations.csv")
-pittag_data_raw <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may")
+#pittag_data_raw <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may") # No calls from desktop! :)
+pittag_data_raw <- read_csv("0LL_cleaned_nov_may")
 
 #Add Side_Channel and Complex columns ----
 channel_complex <- pittag_data_raw %>% 
@@ -27,7 +36,7 @@ channel_complex <- pittag_data_raw %>%
 #Create New Data Frame with Columns tag_code,complex,total_time ---- 
 
 #Filter "channel_complex" for each complex called cc_1 & cc_2
-cc_1 <- channel_complex %>% filter(Complex %in% c("exit","Complex 1"))
+cc_1 <- channel_complex %>% filter(Complex %in% c("exit","Complex 1")) # If you wanted, you could throw this into the loops below to cut down stuff in environment.
 cc_2 <- channel_complex %>% filter(Complex == "Complex 2")
 
 #Each loop runs through every unique individual that enters into their respective complex
@@ -56,16 +65,20 @@ for(j in fish_2) {
 
 
 #Compile all vectors to create data frame. Note that the order in which 
-#vectors are combined matters.
+#vectors are combined matters. 
+
+# BO - This is a good opportunity to practice piping.
+# Instead of creating a bunch of vectors in your environment, pipe this data manipulation together to create "plot_time". 
+# Then you wont have five extra vectors in your environment that you only use once.
 complex_1_vec <- c(rep("Complex 1",times = length(total_time_1)))
 complex_2_vec <- c(rep("Complex 2",times = length(total_time_2)))
-tot_time_vec <- c(total_time_1,total_time_2)
+tot_time_vec <- c(total_time_1,total_time_2) 
 tag_id_vec   <- c(tag_id_1,tag_id_2)
 complex_vec  <- c(complex_1_vec,complex_2_vec)
 
 #Create data frame and also calculate average time spent at project site.
 plot_time <- data.frame(tag_id_vec,complex_vec,tot_time_vec)
-mean_1 <- mean(plot_time$tot_time_vec)
+mean_1 <- mean(plot_time$tot_time_vec) # add this directly to ggplot. no need to create "mean_1"
 
 #Create ggplot that shows time spent at each complex.----
 

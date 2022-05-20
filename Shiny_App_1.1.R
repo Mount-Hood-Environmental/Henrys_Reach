@@ -1,3 +1,11 @@
+# BO - It's good practice to provide quick summary information about the script at the top
+
+# Authors: Bridger Bertram
+# Purpose:  Fill in
+# Created: Fill in
+# Last Modified: Fill in
+# Notes:
+
 # Load Packages and Data ------
 library(tidyverse)
 library(sf)
@@ -7,7 +15,7 @@ library(shiny)
 library(scales)
 
 litz_locs <- read_csv("Litz_Locations.csv")
-pittag_data <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may")
+pittag_data <- read_csv("0LL_cleaned_nov_may")
 
 ui <- fluidPage(
   titlePanel("Henry's Reach Detection Data"),
