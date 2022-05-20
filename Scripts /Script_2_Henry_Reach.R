@@ -1,4 +1,3 @@
-# BO - It's good practice to provide quick summary information about the script at the top
 
 # Authors: Bridger Bertram
 # Purpose:  Fill in
@@ -8,15 +7,13 @@
 
 #load packages and data -----
 library(tidyverse)
-library(lubridate)
 library(sf)
 library(mapview)
 library(leaflet)
 library(scales)
 
-litz_locs <- read_csv("Litz_Locations.csv")
-#pittag_data_raw <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may") # No calls from desktop! :)
-pittag_data_raw <- read_csv("0LL_cleaned_nov_may")
+litz_locs <- read_csv("Data/Litz_Locations.csv")
+pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
 #Add Side_Channel and Complex columns ----
 channel_complex <- pittag_data_raw %>% 
@@ -48,7 +45,7 @@ fish_1 <- unique(cc_1$tag_code)
 total_time_1 <- c()
 tag_id_1 <- c()
 for(i in fish_1) {
-track_fish_1 <- cc_1 %>% filter(tag_code == i)
+track_fish_1 <- channel_complex %>% filter(tag_code == i)
 total_time_1 <- c(total_time_1, max(track_fish_1$max_det) - min(track_fish_1$min_det))
 tag_id_1 <- c(tag_id_1,i)
 }
@@ -63,28 +60,19 @@ for(j in fish_2) {
   tag_id_2 <- c(tag_id_2,j)
 }
 
-
-#Compile all vectors to create data frame. Note that the order in which 
-#vectors are combined matters. 
-
-# BO - This is a good opportunity to practice piping.
-# Instead of creating a bunch of vectors in your environment, pipe this data manipulation together to create "plot_time". 
-# Then you wont have five extra vectors in your environment that you only use once.
-complex_1_vec <- c(rep("Complex 1",times = length(total_time_1)))
-complex_2_vec <- c(rep("Complex 2",times = length(total_time_2)))
-tot_time_vec <- c(total_time_1,total_time_2) 
-tag_id_vec   <- c(tag_id_1,tag_id_2)
-complex_vec  <- c(complex_1_vec,complex_2_vec)
-
 #Create data frame and also calculate average time spent at project site.
-plot_time <- data.frame(tag_id_vec,complex_vec,tot_time_vec)
-mean_1 <- mean(plot_time$tot_time_vec) # add this directly to ggplot. no need to create "mean_1"
+plot_time <- tibble(.rows = length(c(tag_id_1,tag_id_2))) %>%
+  mutate(
+    tag_id = c(tag_id_1,tag_id_2),
+    tot_time = c(total_time_1,total_time_2),
+    complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
+                     c(rep("Complex 2",times = length(total_time_2)))))
 
 #Create ggplot that shows time spent at each complex.----
 
- ggplot(plot_time, aes(x=tot_time_vec,color=complex_vec)) + 
+ ggplot(plot_time, aes(x=tot_time,color=complex_vec)) + 
    geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
-   geom_vline(data=plot_time, aes(xintercept=mean_1),
+   geom_vline(data=plot_time, aes(xintercept=mean(tot_time)),
               linetype="dashed") +
   xlab("Days Spent in Project Site")+ 
   ylab("Number of Individuals") 

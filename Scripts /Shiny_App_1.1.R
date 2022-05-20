@@ -1,3 +1,10 @@
+# Authors: Bridger Bertram
+# Purpose:  Fill in
+# Created: Fill in
+# Last Modified: Fill in
+# Notes:
+
+
 # Load Packages and Data ------
 library(tidyverse)
 library(sf)
@@ -7,6 +14,7 @@ library(shiny)
 library(shinythemes)
 library(scales)
 
+setwd("~/Desktop/GitHub/Henrys_reach")
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
