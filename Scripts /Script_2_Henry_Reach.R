@@ -77,5 +77,9 @@ mean_1 <- mean(plot_time$tot_time_vec)
   ylab("Number of Individuals") 
 
 
+ 
+
+
+
 
 

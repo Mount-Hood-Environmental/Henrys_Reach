@@ -107,25 +107,36 @@ pittag_data_month <- pittag_data %>%
 pit_tag_data_unfilterd <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may")
 
 SCC_daily_pit <- pit_tag_data_unfilterd %>% 
-  filter(node %in% c(4:13)) %>% 
-  mutate(Side_Channel = ifelse(node %in% 4:5,   "HRSC 1",  
-                        ifelse(node %in% 6:7,   "HRSC 2",
-                        ifelse(node %in% 8:9,   "HRSC 3",
-                        ifelse(node %in% 10:11, "HRSC 4",
-                        ifelse(node %in% 12:13, "HRSC 5", 0)))))) %>%
+  filter(node %in% c(4:18)) %>% #Filter out data from "SRSC" project
   
-  mutate(Side_Complex = ifelse(Side_Channel %in% c("HRSC 1","HRSC 2"),            "Complex 1",
-                        ifelse(Side_Channel %in% c("HRSC 3", "HRSC 4", "HRSC 5"), "Complex 2",0)))
+  mutate(Side_Channel = ifelse(node %in% 4:5,   "HRSC 1",  #combine nodes into side channels
+                               ifelse(node %in% 6:7,   "HRSC 2",  # e.g. node 4&5 correspond to a single                
+                                      ifelse(node %in% 8:9,   "HRSC 3",  # Side_Channel "HRSC_1"              
+                                             ifelse(node %in% 10:11, "HRSC 4",
+                                                    ifelse(node %in% 12:13, "HRSC 5", 
+                                                           ifelse(node %in% 14:18, "exit", 0)))))),
+         
+         Complex =      ifelse(Side_Channel %in% c("HRSC 1","HRSC 2"), "Complex 1",  #An Individual enters a Complex based off
+                               ifelse(Side_Channel %in% c("HRSC 3", "HRSC 4", "HRSC 5"),    #which Side_Channel entrance is used
+                                      "Complex 2","exit")))
 
  ggplot(SCC_daily_pit, aes(Side_Complex)) + 
       geom_bar()  
     
   
  
- 
+#Plot Fish Paths  -----
 
+pull_tagcode <- SCC_daily_pit %>% pull(tag_code)
+unique_tag_code <- unique(pull_tagcode) 
+select_indv <- unique_tag_code[23]
+fish_path <- filter(SCC_daily_pit,tag_code == select_indv)
 
- 
+ggplot(SCC_daily_pit, aes(x=min_det,y=Side_Channel,color=tag_code,group=tag_code))+
+  geom_point()+
+  geom_line()+
+  theme(legend.position = "none")
+
 
 
 
