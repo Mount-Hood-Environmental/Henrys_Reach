@@ -5,8 +5,8 @@ library(sf)
 library(mapview)
 library(leaflet)
 library(scales)
-litz_locs <- read_csv("Litz_Locations.csv")
-pittag_data <- read_csv("~/Desktop/Github/Henrys_reach/0LL_cleaned_nov_may")
+litz_locs <- read_csv("Data/Litz_Locations.csv")
+pittag_data <- read_csv("Data/0LL_cleaned_nov_may")
 
 
 #Create Plot of Litz Cord Locations 
@@ -17,11 +17,12 @@ litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "H
                 filter(Side_Channel != "NA")
 
 
+project <- "HRSC"
 
-
+if (project == "HRSC") {
 leaflet(litz_locs_sc) %>%
   addProviderTiles('Esri.WorldImagery') %>%
-    setView(lng = -113.627, lat = 44.899, zoom = 15.6) %>%
+    setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
              radius = 5,
              color = "red",
@@ -30,7 +31,19 @@ leaflet(litz_locs_sc) %>%
               style = list(
               "color" = "white"  
               ))) 
-
+} else {
+  leaflet(litz_locs_sc) %>%
+    addProviderTiles('Esri.WorldImagery') %>%
+    setView(lng = -113.627, lat = 44.8751, zoom = 15.6) %>%
+    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+               radius = 5,
+               color = "red",
+               labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+                                           textsize = "10px",
+                                           style = list(
+                                             "color" = "white"  
+                                           ))) 
+}
 
 
 

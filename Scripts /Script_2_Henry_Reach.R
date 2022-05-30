@@ -38,7 +38,7 @@ cc_2 <- channel_complex %>% filter(Complex == "Complex 2")
 
 #Each loop runs through every unique individual that enters into their respective complex
 #and calculates the total time spent in that complex. Data are saved in "total_time_1" & "total_time_2" 
-#for Complex 1 and Complex 2.
+#for Complex 1 and Complex 2 respectively. 
 
 #loop for complex 1
 fish_1 <- unique(cc_1$tag_code)

@@ -1,9 +1,7 @@
 # Authors: Bridger Bertram
-# Purpose:  Fill in
-# Created: Fill in
-# Last Modified: Fill in
-# Notes:
-
+# Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
+# Created: May 15
+# Last Modified: May 30 
 
 # Load Packages and Data ------
 library(tidyverse)
@@ -18,6 +16,7 @@ setwd("~/Desktop/GitHub/Henrys_reach")
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
+# Modify Data structure. Create new column that combines "nodes" in side channels "SC".
 channel_complex <- pittag_data_raw %>% 
   mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",
               ifelse(node ==     3,   "SRSC 2",
@@ -29,10 +28,11 @@ channel_complex <- pittag_data_raw %>%
               ifelse(node %in% 14:16, "HRSC 6",
               ifelse(node ==   17,    "HRSC 7",
               ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
-           
+#Create another column that combines side channels into complexes.         
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
 
+# ui ----
 ui <- fluidPage(theme = shinytheme("yeti"),
   titlePanel("Henry's Reach Detection Data"),
    fluidRow(
@@ -65,7 +65,11 @@ ui <- fluidPage(theme = shinytheme("yeti"),
 
 
 server <- function(input,output,session){
-  
+
+#Henry's Reach Daily Detentions ------   
+  # This plot describes the daily detentions at each side channel. Data is filtered 
+  # based on the date range input. The X-axis is modified with the "if" statement to
+  # improve readablity. 
   output$bar_graph <- renderPlot({
     
     channel_complex_daily_plot <- channel_complex %>%
@@ -89,11 +93,16 @@ server <- function(input,output,session){
                      limits = c(input$daterange[1],input$daterange[2]))
     }
   })
-  
+
+#Duration Plot -----  
   output$Duration_Plot <- renderPlot({
   
     cc_1 <- channel_complex %>% filter(Complex == "Upper HRSC")
     cc_2 <- channel_complex %>% filter(Complex == "Lower HRSC")  
+
+#Each loop runs through every unique individual that enters into their respective complex
+#and calculates the total time spent in that complex. Data are saved in "total_time_1" & "total_time_2" 
+#for Complex 1 and Complex 2 respectively.   
     
     #loop for complex 1
     fish_1 <- unique(cc_1$tag_code)
@@ -114,28 +123,25 @@ server <- function(input,output,session){
       total_time_2 <- c(total_time_2, max(track_fish_2$max_det) - min(track_fish_2$min_det))
       tag_id_2 <- c(tag_id_2,j)
     }
-    
-    complex_1_vec <- c(rep("Upper HRSC",times = length(total_time_1)))
-    complex_2_vec <- c(rep("Lower HRSC",times = length(total_time_2)))
-    tot_time_vec <- c(total_time_1,total_time_2)
-    tag_id_vec   <- c(tag_id_1,tag_id_2)
-    complex_vec  <- c(complex_1_vec,complex_2_vec)
-    
-    plot_time <- data.frame(tag_id_vec,complex_vec,tot_time_vec)
-    mean_1 <- mean(plot_time$tot_time_vec)
-    
-    
-      
-    
-  ggplot(plot_time, aes(x=tot_time_vec,color=complex_vec)) + 
-    geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
-    geom_vline(data=plot_time, aes(xintercept=mean_1),
+
+# Create data frame that combines data from loops to be used for ggplot.         
+    plot_time <- tibble(.rows = length(c(tag_id_1,tag_id_2))) %>%
+      mutate(
+        tag_id = c(tag_id_1,tag_id_2),
+        tot_time = c(total_time_1,total_time_2),
+        complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
+                         c(rep("Complex 2",times = length(total_time_2)))))
+
+#Plot the time spent by juvenile Chinook in each complex.         
+    ggplot(plot_time, aes(x=tot_time,color=complex_vec)) + 
+      geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
+      geom_vline(data=plot_time, aes(xintercept=mean(tot_time)),
                  linetype="dashed") +
-    xlab("Days Spent in Project Site")+ 
-    ylab("Number of Individuals") 
+      xlab("Days Spent in Project Site")+ 
+      ylab("Number of Individuals") 
   })
  
-  
+# SRSC Daily Detections  ----  
   output$SRSC_bar_plot <- renderPlot({
     
     channel_complex_SRSC <- channel_complex %>%
@@ -159,7 +165,7 @@ server <- function(input,output,session){
     }
  })
   
-  
+# Leaflet Map of Project Site ---- 
   output$SC_map <- renderLeaflet({
     
     litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "HRSC 1", 
@@ -168,17 +174,16 @@ server <- function(input,output,session){
                                                           "NA", "NA", "HRSC 7", "HRSC 8")) %>%
       filter(Side_Channel != "NA")
     
-    
       leaflet(litz_locs_sc) %>%
         addProviderTiles('Esri.WorldImagery') %>%
-        setView(lng = -113.627, lat = 44.899, zoom = 15.6) %>%
+        setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
         addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                    radius = 5,
                    color = "red",
                    labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                                textsize = "10px",
                    style = list (
-                   "color"="white"))) 
+                   "color"="white")))
      
   })
 }
