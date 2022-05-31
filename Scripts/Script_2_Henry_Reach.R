@@ -1,11 +1,10 @@
 
 # Authors: Bridger Bertram
-# Purpose:  Fill in
-# Created: Fill in
-# Last Modified: Fill in
-# Notes:
+# Purpose: Create Plots before adding to Shiny App
+# Created: May 06 
+# Last Modified: May 31
 
-#load packages and data -----
+#load packages & Data / Modify Data Structure -----
 library(tidyverse)
 library(sf)
 library(mapview)
@@ -14,8 +13,8 @@ library(scales)
 
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
 
-#Add Side_Channel and Complex columns ----
 channel_complex <- pittag_data_raw %>% 
   mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",
               ifelse(node ==     3,   "SRSC 2",
@@ -30,54 +29,64 @@ channel_complex <- pittag_data_raw %>%
   #Create another column that combines side channels into complexes.         
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
-#Create New Data Frame with Columns tag_code,complex,total_time ---- 
 
-#Filter "channel_complex" for each complex called cc_1 & cc_2
-cc_1 <- channel_complex %>% filter(Complex == "Upper HRSC")
-cc_2 <- channel_complex %>% filter(Complex == "Lower HRSC") 
+#Duration Plot ----
 
 #Each loop runs through every unique individual that enters into their respective complex
 #and calculates the total time spent in that complex. Data are saved in "total_time_1" & "total_time_2" 
-#for Complex 1 and Complex 2 respectively. 
+#for Upper HRSC and Lower HRSC respectively. 
 
 #loop for complex 1
-fish_1 <- unique(cc_1$tag_code)
 total_time_1 <- c()
-tag_id_1 <- c()
-for(i in fish_1) {
-track_fish_1 <- channel_complex %>% filter(tag_code == i)
-total_time_1 <- c(total_time_1, max(track_fish_1$max_det) - min(track_fish_1$min_det))
-tag_id_1 <- c(tag_id_1,i)
+for(i in unique(filter(channel_complex, Complex == "Upper HRSC")$tag_code)) {
+  
+  total_time_1 <- c(total_time_1, 
+                    max((channel_complex %>% filter(Complex == "Upper HRSC", tag_code == i))$max_det) - 
+                    min((channel_complex %>% filter(Complex == "Upper HRSC", tag_code == i))$min_det))
 }
 
 #loop for complex 2
-fish_2 <- unique(cc_2$tag_code)
 total_time_2 <- c()
-tag_id_2 <- c()
-for(j in fish_2) {
-  track_fish_2 <- cc_2 %>% filter(tag_code == j)
-  total_time_2 <- c(total_time_2, max(track_fish_2$max_det) - min(track_fish_2$min_det))
-  tag_id_2 <- c(tag_id_2,j)
+for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
+  
+  total_time_2 <- c(total_time_2, 
+                    max((channel_complex %>% filter(Complex == "Lower HRSC", tag_code == j))$max_det) - 
+                    min((channel_complex %>% filter(Complex == "Lower HRSC", tag_code == j))$min_det))
+  
 }
 
-#Create data frame and also calculate average time spent at project site.
-plot_time <- tibble(.rows = length(c(tag_id_1,tag_id_2))) %>%
-  mutate(
-    tag_id = c(tag_id_1,tag_id_2),
-    tot_time = c(total_time_1,total_time_2),
-    complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
-                     c(rep("Complex 2",times = length(total_time_2)))))
+#Create ggplot that shows time spent at each complex.
 
-#Create ggplot that shows time spent at each complex.----
-
- ggplot(plot_time, aes(x=tot_time,color=complex_vec)) + 
-   geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
-   geom_vline(data=plot_time, aes(xintercept=mean(tot_time)),
-              linetype="dashed") +
+ ggplot(
+   
+       tibble(.rows = length(c(total_time_1,total_time_2))) %>%
+       mutate(tot_time = c(total_time_1,total_time_2),
+              complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
+              c(rep("Complex 2",times = length(total_time_2))))),
+              aes(x=tot_time,color=complex_vec)) + 
+   
+  geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
+  geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
   xlab("Days Spent in Project Site")+ 
   ylab("Number of Individuals") 
 
-
+# Leaflet Plot ----
+ leaflet(litz_locs %>% mutate(Side_Channel = 
+               c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
+                 "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+                  "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                  "NA"   ,"HRSC 7", "HRSC 8")) %>%
+                filter(Side_Channel != "NA")
+            ) %>%
+   addProviderTiles('Esri.WorldImagery') %>%
+   addRasterRGB(ortho) %>%
+   setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
+   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+              radius = 5,
+              color = "red",
+              labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+                                          textsize = "10px",
+                                          style = list("color" = "white" ))) 
  
 
 

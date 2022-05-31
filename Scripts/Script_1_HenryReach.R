@@ -9,8 +9,11 @@ library(abind)
 library(stars)
 library(scales)
 library(tiff)
+library(raster)
+library(magrittr)
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data <- read_csv("Data/0LL_cleaned_nov_may")
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
 
 
 #Create Plot of Litz Cord Locations 
@@ -20,18 +23,11 @@ litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "H
                                       "NA", "NA", "HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA")
 
-tif = system.file("HenryReach_Orthomosaic_export_FriMay06190320779170.tif", package = "stars")
-x1 = read_stars(tif)
-x1 = x1[, , , 3] # band 3
 
-tmpfl = tempfile(fileext = tif)
-
-write_stars(st_warp( crs = 4326), tmpfl)
 
 leaflet(litz_locs_sc) %>%
   addProviderTiles('Esri.WorldImagery') %>%
-  addGeotiff(file = file = tmpfl,
-             opacity = 0) %>%
+  addRasterRGB(ortho) %>%
     setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
              radius = 5,
