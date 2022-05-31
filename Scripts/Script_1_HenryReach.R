@@ -4,7 +4,11 @@ library(lubridate)
 library(sf)
 library(mapview)
 library(leaflet)
+library(leafem)
+library(abind)
+library(stars)
 library(scales)
+library(tiff)
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data <- read_csv("Data/0LL_cleaned_nov_may")
 
@@ -16,12 +20,18 @@ litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "H
                                       "NA", "NA", "HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA")
 
+tif = system.file("HenryReach_Orthomosaic_export_FriMay06190320779170.tif", package = "stars")
+x1 = read_stars(tif)
+x1 = x1[, , , 3] # band 3
 
-project <- "HRSC"
+tmpfl = tempfile(fileext = tif)
 
-if (project == "HRSC") {
+write_stars(st_warp( crs = 4326), tmpfl)
+
 leaflet(litz_locs_sc) %>%
   addProviderTiles('Esri.WorldImagery') %>%
+  addGeotiff(file = file = tmpfl,
+             opacity = 0) %>%
     setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
              radius = 5,
@@ -31,19 +41,7 @@ leaflet(litz_locs_sc) %>%
               style = list(
               "color" = "white"  
               ))) 
-} else {
-  leaflet(litz_locs_sc) %>%
-    addProviderTiles('Esri.WorldImagery') %>%
-    setView(lng = -113.627, lat = 44.8751, zoom = 15.6) %>%
-    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-               radius = 5,
-               color = "red",
-               labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                           textsize = "10px",
-                                           style = list(
-                                             "color" = "white"  
-                                           ))) 
-}
+
 
 
 
