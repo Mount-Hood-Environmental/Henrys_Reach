@@ -73,13 +73,12 @@ ui <- fluidPage(theme = shinytheme("yeti"),
  )
 )
 
-
 server <- function(input,output,session){
 
 #Henry's Reach Daily Detentions ------   
   # This plot describes the daily detentions at each side channel. Data is filtered 
   # based on the date range input. The X-axis is modified with the "if" statement to
-  # improve readablity. 
+  # improve readability. 
   output$bar_graph <- renderPlot({
     
     channel_complex_daily_plot <- channel_complex %>%
@@ -87,14 +86,17 @@ server <- function(input,output,session){
     filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]) 
            , Complex == input$Complex) 
     
-    if (input$daterange[2]-input$daterange[1]<=10) { 
+    if (input$daterange[2]-input$daterange[1]<=10) {
+      
     ggplot(channel_complex_daily_plot, aes(x=as.Date(min_det), fill = as.factor(SC))) +
       geom_bar(color = "black") + 
       labs(title = "Daily Detections", x="Date",
            y = "Number of detections", fill = "Side Channel" ) +
       scale_x_date(date_breaks = "1 day" , labels = date_format("%m/%d/%y"),
                    limits = c(input$daterange[1],input$daterange[2]))
+      
     }else{
+      
     ggplot(channel_complex_daily_plot, aes(x=as.Date(min_det), fill = as.factor(SC))) +
       geom_bar(color = "black") + 
       labs(title = "Daily Detections", x="Date",
@@ -133,12 +135,11 @@ server <- function(input,output,session){
     ggplot(
       
       tibble(.rows = length(c(total_time_1,total_time_2))) %>%
-        mutate(
-          tot_time = c(total_time_1,total_time_2),
-          complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
-                           c(rep("Complex 2",times = length(total_time_2))))),
+      mutate(tot_time = c(total_time_1,total_time_2),
+             complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
+             c(rep("Complex 2",times = length(total_time_2))))),
+             aes(x=tot_time,color=complex_vec)) + 
       
-      aes(x=tot_time,color=complex_vec)) + 
       geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
       geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
       xlab("Days Spent in Project Site")+ 
@@ -146,7 +147,7 @@ server <- function(input,output,session){
  
   })   
   
-# SRSC Daily Detections  ----  
+# SRSC Daily Detection  ----  
   output$SRSC_bar_plot <- renderPlot({
     
     channel_complex_SRSC <- channel_complex %>%
@@ -172,14 +173,14 @@ server <- function(input,output,session){
   
 # Leaflet Map of Project Site ---- 
   output$SC_map <- renderLeaflet({
-    
-    litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "HRSC 1", 
-                                                          "NA", "HRSC 2", "NA","HRSC 3", "NA",
-                                                          "HRSC 4", "NA", "HRSC 5", "NA", "HRSC 6", 
-                                                          "NA", "NA", "HRSC 7", "HRSC 8")) %>%
-      filter(Side_Channel != "NA")
-    
-      leaflet(litz_locs_sc) %>%
+
+      leaflet(
+      litz_locs %>% mutate(Side_Channel = 
+               c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
+                 "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+                  "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                  "NA"   ,"HRSC 7", "HRSC 8")) %>%
+                  filter(Side_Channel != "NA")) %>%
         addProviderTiles('Esri.WorldImagery') %>%
         addRasterRGB(ortho) %>%
         setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
@@ -188,9 +189,7 @@ server <- function(input,output,session){
                    color = "red",
                    labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                                textsize = "10px",
-                   style = list (
-                   "color"="white")))
-     
+                   style = list ("color"="white")))
   })
 }
 shinyApp(ui=ui,server=server)

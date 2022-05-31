@@ -13,6 +13,7 @@ library(raster)
 library(magrittr)
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data <- read_csv("Data/0LL_cleaned_nov_may")
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
 
 
 #Create Plot of Litz Cord Locations 
@@ -22,12 +23,11 @@ litz_locs_sc <- litz_locs %>% mutate(Side_Channel = c("SRC 1", "NA", "SRC 2", "H
                                       "NA", "NA", "HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA")
 
-ortho <- terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()
-ortho_reduced <- aggregate(ortho, fact = 5)
+
 
 leaflet(litz_locs_sc) %>%
   addProviderTiles('Esri.WorldImagery') %>%
-  addRasterRGB(ortho_reduced) %>%
+  addRasterRGB(ortho) %>%
     setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
              radius = 5,
