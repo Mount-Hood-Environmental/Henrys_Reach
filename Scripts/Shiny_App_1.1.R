@@ -8,6 +8,8 @@ library(tidyverse)
 library(sf)
 library(mapview)
 library(leaflet)
+library(leafem)
+library(raster)
 library(shiny)
 library(shinythemes)
 library(scales)
@@ -15,6 +17,7 @@ library(scales)
 setwd("~/Desktop/GitHub/Henrys_reach")
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
 channel_complex <- pittag_data_raw %>% 
@@ -178,6 +181,7 @@ server <- function(input,output,session){
     
       leaflet(litz_locs_sc) %>%
         addProviderTiles('Esri.WorldImagery') %>%
+        addRasterRGB(ortho) %>%
         setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
         addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                    radius = 5,
