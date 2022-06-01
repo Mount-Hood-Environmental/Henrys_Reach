@@ -13,7 +13,8 @@ library(scales)
 
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
-ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
+                    raster::brick()), fact = 10)
 
 channel_complex <- pittag_data_raw %>% 
   mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",
@@ -30,7 +31,7 @@ channel_complex <- pittag_data_raw %>%
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
 
-#Duration Plot ----
+#Duration Plot HRSC ----
 
 #Each loop runs through every unique individual that enters into their respective complex
 #and calculates the total time spent in that complex. Data are saved in "total_time_1" & "total_time_2" 
@@ -69,24 +70,49 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
   geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
   xlab("Days Spent in Project Site")+ 
   ylab("Number of Individuals") 
+ 
+#Duration Plot SRSC ----
+ 
+ total_time_3 <- c()
+ for(k in unique(filter(channel_complex, Complex == "SRSC")$tag_code)) {
+   
+   total_time_3 <- c(total_time_3, 
+                     max((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$max_det) - 
+                     min((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$min_det))
+ } 
+ 
+ 
+ ggplot(
+   
+   tibble(.rows = length(c(total_time_3))) %>%
+     mutate(tot_time = c(total_time_3),
+            complex_vec = c( rep("SRSC",times = length(total_time_3 )))),
+     aes(x=tot_time,color=complex_vec)) + 
+   
+   geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
+   geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
+   xlab("Days Spent in Project Site")+ 
+   ylab("Number of Individuals")
 
 # Leaflet Plot ----
- leaflet(litz_locs %>% mutate(Side_Channel = 
+leaflet(litz_locs %>% mutate(Side_Channel = 
                c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
                  "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
                   "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
-                filter(Side_Channel != "NA")
-            ) %>%
+                filter(Side_Channel != "NA") %>%
+                mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+                mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho) %>%
    setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
               radius = 5,
-              color = "red",
+              color =~Color, 
               labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                           textsize = "10px",
-                                          style = list("color" = "white" ))) 
+                                          style = list("color" = "white" ))) %>%
+   addLegend(labels = ~unique(complex),color = ~unique(Color))
  
 
 

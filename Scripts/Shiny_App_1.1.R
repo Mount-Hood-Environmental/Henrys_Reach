@@ -39,13 +39,11 @@ channel_complex <- pittag_data_raw %>%
 ui <- fluidPage(theme = shinytheme("yeti"),
   titlePanel("Henry's Reach Detection Data"),
    fluidRow(
-    column(7,
-     tabsetPanel(
-      tabPanel("HRSC", 
-      
-       tabsetPanel(type = "tabs",
-              
-              tabPanel("Daily Dections", 
+      column(7,
+       tabsetPanel(
+         tabPanel("HRSC", 
+          tabsetPanel(type = "tabs",
+              tabPanel("Daily Detections", 
                                dateRangeInput('daterange','Select Date Range',
                                       start = "2022-03-25",
                                       end   = "2022-04-05",
@@ -53,25 +51,28 @@ ui <- fluidPage(theme = shinytheme("yeti"),
                                       max = as.Date(max(pittag_data_raw$min_det))),
                                selectInput('Complex','Side Channel Complex',choices = c("Lower HRSC","Upper HRSC")),
                                plotOutput('bar_graph')),
-      
               tabPanel("Duration",plotOutput('Duration_Plot'))
-                
-  )
- ),
+                   ) #tabsetPannel (within HRSC tab)
+                 ), #tabPannel "HRSC"
  tabPanel("SRSC",
+   tabsetPanel(type = "tabs", 
+      tabPanel("Daily Detections",      
           dateRangeInput('daterange_2','Select Date Range',
                          start = "2022-03-25",
                          end   = "2022-04-05",
                          min = as.Date(min(pittag_data_raw$min_det)),
                          max = as.Date(max(pittag_data_raw$min_det))),
-          plotOutput('SRSC_bar_plot'))
- ),
-),
- column(width = 5,
-        leafletOutput('SC_map')
-  )
- )
-)
+          plotOutput('SRSC_bar_plot')),
+      tabPanel("Duration",plotOutput('Duration_Plot_SRSC'))
+                ), #tabsetPannel (within "SRSC" tab)
+               ), #tabPanel "SRSC"
+              ), #tabsetPanel (main)
+             ), #column
+ column(width  = 5, 
+        offset = 0, 
+        leafletOutput('SC_map', height = "85vh"))
+  ), #fluidRow
+) #fluidPage
 
 server <- function(input,output,session){
 
@@ -170,26 +171,47 @@ server <- function(input,output,session){
                      limits = c(input$daterange_2[1],input$daterange_2[2]))
     }
  })
+
+# SRSC Duration Plot ----
+  output$Duration_Plot_SRSC <- renderPlot({
+    total_time_3 <- c()
+    for(k in unique(filter(channel_complex, Complex == "SRSC")$tag_code)) {
+      
+      total_time_3 <- c(total_time_3, 
+                        max((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$max_det) - 
+                          min((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$min_det))
+    } 
+    ggplot(
+      tibble(.rows = length(c(total_time_3))) %>%
+        mutate(tot_time = c(total_time_3),
+               complex_vec = c( rep("SRSC",times = length(total_time_3 )))),
+      aes(x=tot_time)) + 
+      geom_histogram(bins = 10) +
+      geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
+      xlab("Days Spent in Project Site")+ 
+      ylab("Number of Individuals")
+  })
   
 # Leaflet Map of Project Site ---- 
   output$SC_map <- renderLeaflet({
-
-      leaflet(
-      litz_locs %>% mutate(Side_Channel = 
-               c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
-                 "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
-                  "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
-                  "NA"   ,"HRSC 7", "HRSC 8")) %>%
-                  filter(Side_Channel != "NA")) %>%
-        addProviderTiles('Esri.WorldImagery') %>%
-        addRasterRGB(ortho) %>%
-        setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
-        addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-                   radius = 5,
-                   color = "red",
-                   labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                               textsize = "10px",
-                   style = list ("color"="white")))
+    leaflet(litz_locs %>% mutate(Side_Channel = 
+                                   c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
+                                     "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+                                     "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                                     "NA"   ,"HRSC 7", "HRSC 8")) %>%
+              filter(Side_Channel != "NA") %>%
+              mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+              mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
+      addProviderTiles('Esri.WorldImagery') %>%
+      addRasterRGB(ortho) %>%
+      setView(lng = -113.627, lat = 44.887, zoom = 14) %>%
+      addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+                 radius = 5,
+                 color =~Color, 
+                 labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+                                             textsize = "10px",
+                                             style = list("color" = "white" ))) %>%
+      addLegend(labels = ~unique(complex),color = ~unique(Color))
   })
 }
 shinyApp(ui=ui,server=server)
