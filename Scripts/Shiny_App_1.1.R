@@ -1,7 +1,7 @@
 # Authors: Bridger Bertram
 # Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
 # Created: May 15
-# Last Modified: May 31
+# Last Modified: June 3
 
 # Load Packages and Data ------
 library(tidyverse)
@@ -17,7 +17,9 @@ library(scales)
 setwd("~/Desktop/GitHub/Henrys_reach")
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
-ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>% raster::brick()), fact = 10)
+ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
+         raster::brick()), fact = 3)
+         ortho[ortho == 0] <- NA
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
 channel_complex <- pittag_data_raw %>% 
@@ -186,7 +188,7 @@ server <- function(input,output,session){
         mutate(tot_time = c(total_time_3),
                complex_vec = c( rep("SRSC",times = length(total_time_3 )))),
       aes(x=tot_time)) + 
-      geom_histogram(bins = 10) +
+      geom_histogram(bins = 10, alpha=0.5, color = "red") + +
       geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
       xlab("Days Spent in Project Site")+ 
       ylab("Number of Individuals")
@@ -203,7 +205,11 @@ server <- function(input,output,session){
               mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
               mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
       addProviderTiles('Esri.WorldImagery') %>%
-      addRasterRGB(ortho) %>%
+      addRasterRGB(ortho , na.color = "transparent",
+                   r = 1, 
+                   g = 2, 
+                   b = 3,
+                   domain = 3)%>%
       setView(lng = -113.627, lat = 44.887, zoom = 14) %>%
       addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                  radius = 5,
