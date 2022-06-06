@@ -125,9 +125,13 @@ leaflet(litz_locs %>% mutate(Side_Channel =
 # Shape File Plot ----
  
  ggplot() + 
-   geom_sf(data = Lemhi_200_sf) + 
+   geom_sf(data = Lemhi_200_sf) +
+   geom_point(data = litz_locs, aes(Longitude,Latitude), inherit.aes = FALSE) +
    ggtitle("Lemhi River") + 
    coord_sf()
+ 
+   
+   
 
 
 
