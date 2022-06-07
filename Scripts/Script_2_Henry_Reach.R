@@ -2,7 +2,7 @@
 # Authors: Bridger Bertram
 # Purpose: Create Plots before adding to Shiny App
 # Created: May 06 
-# Last Modified: June 3
+# Last Modified: June 6
 
 #load packages & Data / Modify Data Structure -----
 library(tidyverse)
@@ -19,7 +19,8 @@ pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
                    raster::brick()), fact = 3)
                    ortho[ortho == 0] <- NA
-Lemhi_200_sf <- st_read("Data/shapefiles/Lemhi_200_rch/Lemhi_200.shp")
+Lemhi_200_sf <- st_transform(st_read("Data/shapefiles/Lemhi_200_rch/Lemhi_200.shp"), '+proj=longlat +datum=WGS84')   
+                   
 
 channel_complex <- pittag_data_raw %>% 
   mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",
@@ -88,14 +89,13 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
  
  ggplot(
    
-   tibble(.rows = length(c(total_time_3))) %>%
-     mutate(tot_time = c(total_time_3),
-            complex_vec = c( rep("SRSC",times = length(total_time_3 )))),
+   tibble(.rows = length(total_time_3)) %>%
+     mutate(tot_time = total_time_3),
      aes(x=tot_time)) + 
    
    geom_histogram(bins = 10, alpha=0.5, color = "red") +
    geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
-   xlab("Days Spent in Project Site")+ 
+   xlab("Days Spent in Project Site") + 
    ylab("Number of Individuals")
 
 # Leaflet Plot ----
@@ -108,11 +108,7 @@ leaflet(litz_locs %>% mutate(Side_Channel =
                 mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
                 mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
    addProviderTiles('Esri.WorldImagery') %>%
-   addRasterRGB(ortho , na.color = "transparent",
-                r = 1, 
-                g = 2, 
-                b = 3,
-                domain = 3) %>%
+   addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
    setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>%
    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
               radius = 5,
@@ -122,16 +118,25 @@ leaflet(litz_locs %>% mutate(Side_Channel =
                                           style = list("color" = "white" ))) %>%
    addLegend(labels = ~unique(complex),color = ~unique(Color))
  
-# Shape File Plot ----
- 
- ggplot() + 
-   geom_sf(data = Lemhi_200_sf) +
-   geom_point(data = litz_locs, aes(Longitude,Latitude), inherit.aes = FALSE) +
-   ggtitle("Lemhi River") + 
-   coord_sf()
- 
+# Shape File Leaflet ----
+leaflet(    litz_locs %>% mutate(Side_Channel = 
+                                 c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
+                                   "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+                                   "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
+            filter(Side_Channel != "NA") %>%
+            mutate(complex = c("SRSC","NA","Upper HRSC","NA",rep("NA",5),"Lower HRSC"))%>%
+            filter(complex != "NA")) %>%
    
-   
+setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>% 
+addProviderTiles(providers$CartoDB.Positron) %>%
+addPolygons(data = Lemhi_200_sf) %>%
+addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
+             radius = 10,
+             color = 'red',
+             labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+                                         textsize = "10px"))
+
 
 
 

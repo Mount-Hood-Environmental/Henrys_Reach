@@ -82,6 +82,7 @@ server <- function(input,output,session){
   # This plot describes the daily detentions at each side channel. Data is filtered 
   # based on the date range input. The X-axis is modified with the "if" statement to
   # improve readability. 
+  
   output$bar_graph <- renderPlot({
     
     channel_complex_daily_plot <- channel_complex %>%
@@ -139,9 +140,9 @@ server <- function(input,output,session){
       
       tibble(.rows = length(c(total_time_1,total_time_2))) %>%
       mutate(tot_time = c(total_time_1,total_time_2),
-             complex_vec = c( c(rep("Complex 1",times = length(total_time_1))), 
-             c(rep("Complex 2",times = length(total_time_2))))),
-             aes(x=tot_time,color=complex_vec)) + 
+             complex = c( c(rep("Upper HRSC",times = length(total_time_1))), 
+             c(rep("Lower HRSC",times = length(total_time_2))))),
+             aes(x=tot_time,color=complex)) + 
       
       geom_histogram(bins = 10, fill="white", alpha=0.5, position="identity") +
       geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
@@ -181,16 +182,18 @@ server <- function(input,output,session){
       
       total_time_3 <- c(total_time_3, 
                         max((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$max_det) - 
-                          min((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$min_det))
+                        min((channel_complex %>% filter(Complex == "SRSC", tag_code == k))$min_det))
     } 
+    
     ggplot(
-      tibble(.rows = length(c(total_time_3))) %>%
-        mutate(tot_time = c(total_time_3),
-               complex_vec = c( rep("SRSC",times = length(total_time_3 )))),
+      
+      tibble(.rows = length(total_time_3)) %>%
+        mutate(tot_time = total_time_3),
       aes(x=tot_time)) + 
-      geom_histogram(bins = 10, alpha=0.5, color = "red") + +
+      
+      geom_histogram(bins = 10, alpha=0.5, color = "red") +
       geom_vline(aes(xintercept=mean(tot_time)), linetype="dashed") +
-      xlab("Days Spent in Project Site")+ 
+      xlab("Days Spent in Project Site") + 
       ylab("Number of Individuals")
   })
   
@@ -199,17 +202,13 @@ server <- function(input,output,session){
     leaflet(litz_locs %>% mutate(Side_Channel = 
                                    c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
                                      "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
-                                     "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
-                                     "NA"   ,"HRSC 7", "HRSC 8")) %>%
+                                      "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                                      "NA"   ,"HRSC 7", "HRSC 8")) %>%
               filter(Side_Channel != "NA") %>%
               mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
               mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
       addProviderTiles('Esri.WorldImagery') %>%
-      addRasterRGB(ortho , na.color = "transparent",
-                   r = 1, 
-                   g = 2, 
-                   b = 3,
-                   domain = 3)%>%
+      addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
       setView(lng = -113.627, lat = 44.887, zoom = 14) %>%
       addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                  radius = 5,
