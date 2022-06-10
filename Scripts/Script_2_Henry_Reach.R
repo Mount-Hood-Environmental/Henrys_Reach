@@ -22,7 +22,7 @@ litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 #Orthomosaic of Project Site
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
-                   raster::brick()), fact = 3)
+                   raster::brick()), fact = 10)
                    ortho[ortho == 0] <- NA
 #Lemhi River Basin Shape File 
 Lemhi_200_sf <- st_transform(st_read("Data/shapefiles/Lemhi_200_rch/Lemhi_200.shp"), '+proj=longlat +datum=WGS84') 
@@ -113,6 +113,13 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
    ylab("Number of Individuals")
 
 # Leaflet Plot ----
+ 
+ click_stats <- paste(  "Mar 01 - Apr 18" ,
+                          "<br/>" ,
+                          "Detections =",
+                          sum(filter(channel_complex,between
+                            (as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18")))$SC == "HRSC 3"))
+ 
 leaflet(litz_locs %>% mutate(Side_Channel = 
                c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
                  "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
@@ -127,6 +134,7 @@ leaflet(litz_locs %>% mutate(Side_Channel =
    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
               radius = 5,
               color =~Color, 
+              popup = ~click_stats,
               labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                           textsize = "10px",
                                           style = list("color" = "white" ))) %>%
@@ -157,7 +165,7 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
  ggplot( filter(channel_complex,Complex == "Lower HRSC") , aes(x=as.Date(min_det), fill = as.factor(SC))) +
    geom_bar(color = "black") + 
    labs(title = "Daily Detections : Lower HRSC", x="Date",
-        y = "Number of detections", fill = "Side Channel" ) +
+        y = "Number of detections", fill = "Side Channel") +
    scale_x_date(date_breaks = "1 day" , labels = date_format("%m/%d/%y"),
                 limits = c(as.Date("2022-01-01"),as.Date("2022-05-18")))
  
