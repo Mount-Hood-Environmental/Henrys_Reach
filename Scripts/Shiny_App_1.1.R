@@ -118,11 +118,6 @@ server <- function(input,output,session){
 # Leaflet Map---- 
   output$SC_map <- renderLeaflet({
     
-    click_stats <- paste(  format(as.Date(input$daterange[1]),"%b %d"), "-" , format(as.Date(input$daterange[2]),"%b %d"),
-                           "<br/>" ,
-                           "Detections =",
-                           sum(filter(channel_complex,between(as.Date(min_det),input$daterange[1],input$daterange[2]))$SC == "HRSC 3"))
-    
     if (input$ortho_choice == 'Remove'){
 
       leaflet(litz_locs %>% mutate(Side_Channel =
@@ -132,13 +127,21 @@ server <- function(input,output,session){
                                        "NA"   ,"HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA") %>%
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-                mutate(Color = c("green","green",rep("blue",6)))) %>%
+                mutate(Color = c("green","green",rep("blue",6))) %>%
+                mutate(sum_col = channel_complex %>% 
+                                    filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
+                                    count(SC) %>% 
+                                    filter(SC != c("SRSC 1","SRSC 2")) %>%
+                                    pull(n))) %>%
+        
         addProviderTiles('Esri.WorldImagery') %>%
         setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
         addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                    radius = 5,
                    color =~Color,
-                   popup = ~click_stats,
+                   popup =~paste(    format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d") ,
+                                     "<br/>" ,
+                                     "Detection =", sum_col ),
                    labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                                textsize = "10px",
                                                style = list("color" = "white" ))) %>%
@@ -153,14 +156,22 @@ server <- function(input,output,session){
                                       "NA"   ,"HRSC 7", "HRSC 8")) %>%
               filter(Side_Channel != "NA") %>%
               mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-              mutate(Color = c("green","green",rep("blue",6)))) %>%
+              mutate(Color = c("green","green",rep("blue",6))) %>%
+              mutate(sum_col = channel_complex %>% 
+                                filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
+                                count(SC) %>% 
+                                filter(SC != c("SRSC 1","SRSC 2")) %>%
+                                pull(n))) %>%
+        
       addProviderTiles('Esri.WorldImagery') %>%
       addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
       setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
       addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                  radius = 5,
                  color =~Color,
-                 popup = ~click_stats,
+                 popup = ~paste(  format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d"),
+                                  "<br/>" ,
+                                  "Detection =", sum_col ),
                  labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                              textsize = "10px",
                                              style = list("color" = "white" ))) %>%

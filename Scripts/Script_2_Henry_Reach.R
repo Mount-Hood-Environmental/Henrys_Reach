@@ -114,27 +114,29 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 
 # Leaflet Plot ----
  
- click_stats <- paste(  "Mar 01 - Apr 18" ,
-                          "<br/>" ,
-                          "Detections =",
-                          sum(filter(channel_complex,between
-                            (as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18")))$SC == "HRSC 3"))
- 
 leaflet(litz_locs %>% mutate(Side_Channel = 
-               c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
+               c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   , 
                  "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
                   "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
-                filter(Side_Channel != "NA") %>%
-                mutate(complex = c("SRSC","SRSC",rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-                mutate(Color = c("red","red","green","green",rep("blue",6)))) %>%
+                filter(Side_Channel != "NA" ) %>%
+                mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+                mutate(Color = c("green","green",rep("blue",6))) %>%
+                mutate(sum_col = channel_complex %>% 
+                         filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
+                         count(SC) %>% 
+                         filter(SC != "SRSC 1") %>%
+                         pull(n))) %>%
+          
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
    setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
               radius = 5,
               color =~Color, 
-              popup = ~click_stats,
+              popup = ~paste(  "Mar 01 - Apr 18" ,
+                               "<br/>" ,
+                                "Detection =", sum_col ),
               labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
                                           textsize = "10px",
                                           style = list("color" = "white" ))) %>%
