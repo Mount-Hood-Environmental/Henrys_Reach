@@ -13,8 +13,9 @@ library(raster)
 library(shiny)
 library(shinythemes)
 library(scales)
+library(here)
 
-setwd("~/Desktop/GitHub/Henrys_reach")
+setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
