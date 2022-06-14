@@ -1,7 +1,7 @@
 # Authors: Bridger Bertram
 # Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
 # Created: May 15
-# Last Modified: June 3
+# Last Modified: June 14
 
 # Load Packages and Data ------
 library(tidyverse)
@@ -139,7 +139,7 @@ server <- function(input,output,session){
                                        "NA"   ,"HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA") %>%
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-                mutate(Color = c("green","green",rep("blue",6))) %>%
+                mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
                 mutate(sum_col = channel_complex %>% 
                                     filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                                     filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
@@ -152,8 +152,10 @@ server <- function(input,output,session){
         addProviderTiles('Esri.WorldImagery') %>%
         setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
         addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-                   radius = 5,
+                   radius = 2,
                    color =~Color,
+                   opacity = 1,
+                   fillOpacity = 1,
                    popup =~paste(    format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d") ,
                                      "<br/>" ,
                                      "Detections =", sum_col ),
@@ -171,7 +173,7 @@ server <- function(input,output,session){
                                       "NA"   ,"HRSC 7", "HRSC 8")) %>%
               filter(Side_Channel != "NA") %>%
               mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-              mutate(Color = c("green","green",rep("blue",6))) %>%
+              mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
               mutate(sum_col = channel_complex %>% 
                                 filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                                 filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
@@ -185,8 +187,10 @@ server <- function(input,output,session){
       addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
       setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
       addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-                 radius = 5,
+                 radius = 2,
                  color =~Color,
+                 opacity = 1,
+                 fillOpacity = 1,
                  popup = ~paste(  format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d"),
                                   "<br/>" ,
                                   "Detection =", sum_col ),

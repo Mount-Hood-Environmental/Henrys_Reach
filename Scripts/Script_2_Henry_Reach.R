@@ -2,7 +2,7 @@
 # Authors: Bridger Bertram
 # Purpose: Create Plots before adding to Shiny App
 # Created: May 06 
-# Last Modified: June 6
+# Last Modified: June 14
 
 #load packages & Data / Modify Data Structures -----
 library(tidyverse)
@@ -121,7 +121,7 @@ leaflet(litz_locs %>% mutate(Side_Channel =
                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
                 filter(Side_Channel != "NA" ) %>%
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-                mutate(Color = c("green","green",rep("blue",6))) %>%
+                mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
                 mutate(sum_col = channel_complex %>% 
                          filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                          filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
@@ -135,8 +135,10 @@ leaflet(litz_locs %>% mutate(Side_Channel =
    addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
    setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
    addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-              radius = 5,
+              radius = 2,
               color =~Color, 
+              opacity = 1,
+              fillOpacity = 1,
               popup = ~paste(  "Mar 01 - Apr 18" ,
                                "<br/>" ,
                                 "Detection =", sum_col ),
