@@ -123,11 +123,14 @@ leaflet(litz_locs %>% mutate(Side_Channel =
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
                 mutate(Color = c("green","green",rep("blue",6))) %>%
                 mutate(sum_col = channel_complex %>% 
+                         filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                          filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
                          count(SC) %>% 
-                         filter(SC != "SRSC 1") %>%
+                         complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+                                           'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+                                  fill = list(n = 0)) %>%
                          pull(n))) %>%
-          
+   
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
    setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
@@ -137,9 +140,9 @@ leaflet(litz_locs %>% mutate(Side_Channel =
               popup = ~paste(  "Mar 01 - Apr 18" ,
                                "<br/>" ,
                                 "Detection =", sum_col ),
-              labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                          textsize = "10px",
-                                          style = list("color" = "white" ))) %>%
+              labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE,
+                                          textsize = "12px",
+                                          style = list("color" = "black" ))) %>%
    leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
  
 # Shape File Leaflet ----
@@ -164,12 +167,18 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
  
 #Daily Detection Plots ----
  
- ggplot( filter(channel_complex,Complex == "Lower HRSC") , aes(x=as.Date(min_det), fill = as.factor(SC))) +
+ ggplot( channel_complex %>% 
+           filter(Complex == "Lower HRSC",
+                  between(as.Date(min_det),as.Date("2022-04-20"),as.Date("2022-05-18"))), 
+         
+         aes(x=as.Date(min_det), fill = as.factor(SC))) +
    geom_bar(color = "black") + 
+   scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d")) + 
    labs(title = "Daily Detections : Lower HRSC", x="Date",
         y = "Number of detections", fill = "Side Channel") +
-   scale_x_date(date_breaks = "1 day" , labels = date_format("%m/%d/%y"),
-                limits = c(as.Date("2022-01-01"),as.Date("2022-05-18")))
+   theme(axis.text = element_text(size=12),
+         axis.title = element_text(size = 14, face = "bold"),
+         title = element_text(size = 14, face = "bold"))
  
 #Weekly Detection Plots (facets) ----
  

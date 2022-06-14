@@ -82,9 +82,12 @@ server <- function(input,output,session){
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)), 
            aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
       geom_bar(color = "black") + 
+      scale_x_date(date_breaks = "1 day" , labels = date_format("%b %d")) +
       labs(x="Date", y = "Number of detections", fill = "Side Channel" ) +
-      scale_x_date(date_breaks = "1 day" , labels = date_format("%b %d"),
-                   limits = c(input$daterange[1]-2,input$daterange[2]+2)) 
+      theme(axis.text = element_text(size=12),
+            axis.title = element_text(size = 14, face = "bold"),
+            title = element_text(size = 14, face = "bold"))
+                 
     
     } else if (input$daterange[2]-input$daterange[1]<=75) {
 
@@ -94,9 +97,14 @@ server <- function(input,output,session){
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
            aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
       geom_bar(color = "black") +
+      scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d")) +
       labs( x="Date",y = "Number of detections", fill = "Side Channel" ) +
-      scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d"),
-                     limits = c(input$daterange[1]-2,input$daterange[2]+2))
+      theme(axis.text = element_text(size=12),
+            axis.title = element_text(size = 14, face = "bold"),
+            title = element_text(size = 14, face = "bold"))
+      
+                  
+      
     }else{
       
       ggplot(channel_complex %>%
@@ -105,15 +113,19 @@ server <- function(input,output,session){
                mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
              aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
         geom_bar(color = "black") +
+        scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
         labs( x="Date",y = "Number of detections", fill = "Side Channel" ) +
-        scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"),
-                     limits = c(input$daterange[1]-2,input$daterange[2]+2))
+        theme(axis.text = element_text(size=12),
+              axis.title = element_text(size = 14, face = "bold"),
+              title = element_text(size = 14, face = "bold"))
+                     
+       
     }
   })
 
 # Fish Movement ----
   
- 
+   #In Development
   
 # Leaflet Map---- 
   output$SC_map <- renderLeaflet({
@@ -129,9 +141,12 @@ server <- function(input,output,session){
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
                 mutate(Color = c("green","green",rep("blue",6))) %>%
                 mutate(sum_col = channel_complex %>% 
+                                    filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                                     filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
                                     count(SC) %>% 
-                                    filter(SC != c("SRSC 1","SRSC 2")) %>%
+                                    complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+                                                    'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+                                             fill = list(n = 0)) %>%
                                     pull(n))) %>%
         
         addProviderTiles('Esri.WorldImagery') %>%
@@ -141,9 +156,9 @@ server <- function(input,output,session){
                    color =~Color,
                    popup =~paste(    format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d") ,
                                      "<br/>" ,
-                                     "Detection =", sum_col ),
+                                     "Detections =", sum_col ),
                    labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                               textsize = "10px",
+                                               textsize = "12px",
                                                style = list("color" = "white" ))) %>%
         leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
 
@@ -158,9 +173,12 @@ server <- function(input,output,session){
               mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
               mutate(Color = c("green","green",rep("blue",6))) %>%
               mutate(sum_col = channel_complex %>% 
+                                filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
                                 filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
-                                count(SC) %>% 
-                                filter(SC != c("SRSC 1","SRSC 2")) %>%
+                                count(SC) %>%
+                                complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+                                                'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+                                         fill = list(n = 0)) %>%
                                 pull(n))) %>%
         
       addProviderTiles('Esri.WorldImagery') %>%
@@ -173,8 +191,8 @@ server <- function(input,output,session){
                                   "<br/>" ,
                                   "Detection =", sum_col ),
                  labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                             textsize = "10px",
-                                             style = list("color" = "white" ))) %>%
+                                             textsize = "12px",
+                                             style = list("color" = "black" ))) %>%
       leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
     }
 
