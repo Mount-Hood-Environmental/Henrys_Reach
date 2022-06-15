@@ -19,7 +19,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
-         raster::brick()), fact = 3)
+         raster::brick()), fact = 10)
          ortho[ortho == 0] <- NA
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
@@ -74,54 +74,29 @@ server <- function(input,output,session){
 
 #Detection Data ----    
   output$bar_graph <- renderPlot({
-
-    if (input$daterange[2]-input$daterange[1]<=10) {
-      
-    ggplot(channel_complex %>%
-           filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]), 
-           Complex == input$Complex) %>% 
-           mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)), 
-           aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
-      geom_bar(color = "black") + 
-      scale_x_date(date_breaks = "1 day" , labels = date_format("%b %d")) +
-      labs(x="Date", y = "Number of detections", fill = "Side Channel" ) +
-      theme(axis.text = element_text(size=12),
-            axis.title = element_text(size = 14, face = "bold"),
-            title = element_text(size = 14, face = "bold"))
-                 
     
+    if (input$daterange[2]-input$daterange[1]<=10) {
+      x_axis_args <- scale_x_date(date_breaks = "1 day" , labels = date_format("%b %d"))
     } else if (input$daterange[2]-input$daterange[1]<=75) {
-
+      x_axis_args <- scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d"))
+    }else{
+      x_axis_args <- scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
+    }
+    
     ggplot(channel_complex %>%
            filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]),
            Complex == input$Complex) %>%
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
            aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
       geom_bar(color = "black") +
-      scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d")) +
-      labs( x="Date",y = "Number of detections", fill = "Side Channel" ) +
-      theme(axis.text = element_text(size=12),
-            axis.title = element_text(size = 14, face = "bold"),
-            title = element_text(size = 14, face = "bold"))
-      
-                  
-      
-    }else{
-      
-      ggplot(channel_complex %>%
-               filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]),
-                      Complex == input$Complex) %>%
-               mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
-             aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
-        geom_bar(color = "black") +
-        scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
-        labs( x="Date",y = "Number of detections", fill = "Side Channel" ) +
-        theme(axis.text = element_text(size=12),
-              axis.title = element_text(size = 14, face = "bold"),
-              title = element_text(size = 14, face = "bold"))
-                     
-       
-    }
+      x_axis_args + 
+      labs(x="Date", y = "Number of detections", fill = "Side Channel",
+           caption = "Caption Text") +
+      theme(axis.text = element_text(size=14),
+            legend.text = element_text(size = 14),
+            axis.title = element_text(size = 16, face = "bold"),
+            plot.caption = element_text(hjust = 0, size = 14),
+            title = element_text(size = 16, face = "bold"))
   })
 
 # Fish Movement ----
@@ -132,7 +107,12 @@ server <- function(input,output,session){
   output$SC_map <- renderLeaflet({
     
     if (input$ortho_choice == 'Remove'){
-
+      empty_raster <- raster::brick()
+      ortho <- empty_raster
+    }else{
+      ortho <- ortho  
+    }
+    
       leaflet(litz_locs %>% mutate(Side_Channel =
                                      c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
                                        "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
@@ -141,16 +121,17 @@ server <- function(input,output,session){
                 filter(Side_Channel != "NA") %>%
                 mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
                 mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
-                mutate(sum_col = channel_complex %>% 
+                mutate(sum_col = channel_complex %>%
                                     filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
-                                    filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
-                                    count(SC) %>% 
+                                    filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
+                                    count(SC) %>%
                                     complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
-                                                    'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+                                                    'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'),
                                              fill = list(n = 0)) %>%
                                     pull(n))) %>%
-        
+
         addProviderTiles('Esri.WorldImagery') %>%
+        addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
         setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
         addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
                    radius = 2,
@@ -164,42 +145,75 @@ server <- function(input,output,session){
                                                textsize = "12px",
                                                style = list("color" = "white" ))) %>%
         leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
+      
 
-    }else{
-
-    leaflet(litz_locs %>% mutate(Side_Channel =
-                                   c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
-                                     "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
-                                      "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   ,
-                                      "NA"   ,"HRSC 7", "HRSC 8")) %>%
-              filter(Side_Channel != "NA") %>%
-              mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-              mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
-              mutate(sum_col = channel_complex %>% 
-                                filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
-                                filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
-                                count(SC) %>%
-                                complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
-                                                'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
-                                         fill = list(n = 0)) %>%
-                                pull(n))) %>%
-        
-      addProviderTiles('Esri.WorldImagery') %>%
-      addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
-      setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
-      addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
-                 radius = 2,
-                 color =~Color,
-                 opacity = 1,
-                 fillOpacity = 1,
-                 popup = ~paste(  format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d"),
-                                  "<br/>" ,
-                                  "Detection =", sum_col ),
-                 labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                             textsize = "12px",
-                                             style = list("color" = "black" ))) %>%
-      leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
-    }
+    #   leaflet(litz_locs %>% mutate(Side_Channel =
+    #                                  c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
+    #                                    "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
+    #                                    "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   ,
+    #                                    "NA"   ,"HRSC 7", "HRSC 8")) %>%
+    #             filter(Side_Channel != "NA") %>%
+    #             mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+    #             mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
+    #             mutate(sum_col = channel_complex %>% 
+    #                                 filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
+    #                                 filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
+    #                                 count(SC) %>% 
+    #                                 complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+    #                                                 'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+    #                                          fill = list(n = 0)) %>%
+    #                                 pull(n))) %>%
+    #     
+    #     addProviderTiles('Esri.WorldImagery') %>%
+    #     setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
+    #     addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+    #                radius = 2,
+    #                color =~Color,
+    #                opacity = 1,
+    #                fillOpacity = 1,
+    #                popup =~paste(    format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d") ,
+    #                                  "<br/>" ,
+    #                                  "Detections =", sum_col ),
+    #                labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+    #                                            textsize = "12px",
+    #                                            style = list("color" = "white" ))) %>%
+    #     leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
+    # 
+    # }else{
+    # 
+    # leaflet(litz_locs %>% mutate(Side_Channel =
+    #                                c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
+    #                                  "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
+    #                                   "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   ,
+    #                                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
+    #           filter(Side_Channel != "NA") %>%
+    #           mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+    #           mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
+    #           mutate(sum_col = channel_complex %>% 
+    #                             filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
+    #                             filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>% 
+    #                             count(SC) %>%
+    #                             complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+    #                                             'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+    #                                      fill = list(n = 0)) %>%
+    #                             pull(n))) %>%
+    #     
+    #   addProviderTiles('Esri.WorldImagery') %>%
+    #   addRasterRGB(ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)%>%
+    #   setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
+    #   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+    #              radius = 2,
+    #              color =~Color,
+    #              opacity = 1,
+    #              fillOpacity = 1,
+    #              popup = ~paste(  format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d"),
+    #                               "<br/>" ,
+    #                               "Detection =", sum_col ),
+    #              labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
+    #                                          textsize = "12px",
+    #                                          style = list("color" = "black" ))) %>%
+    #   leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
+    # }
 
   })
   
