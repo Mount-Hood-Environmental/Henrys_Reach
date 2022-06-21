@@ -19,7 +19,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
-         raster::brick()), fact = 10)
+         raster::brick()), fact = 3)
          ortho[ortho == 0] <- NA
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
@@ -138,7 +138,6 @@ server <- function(input,output,session){
                  fillOpacity = 1,
                  label = ~Side_Channel,
                  labelOptions = labelOptions(noHide = TRUE,
-                                             #textOnly = TRUE,
                                              direction = "bottom",
                                              textsize = "12px",
                                              style = list("color" = "black" )),
@@ -163,12 +162,6 @@ server <- function(input,output,session){
      setView(lng = -113.625, lat = 44.8974, zoom = 20) 
    }
   
-  # if (input$Complex == "Lower HRSC") {
-  #   setView(leaf_plot, lng = -113.627, lat = 44.8995, zoom = 17)
-  # } else {
-  #   setView(leaf_plot, lng = -113.625, lat = 44.8974, zoom = 20)
-  # }
-   
   })
   
 }
