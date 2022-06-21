@@ -15,7 +15,10 @@ library(tiff)
 library(raster)
 library(dataRetrieval)
 library(padr)
+library(here)
+library(leafpop)
 
+setwd(here())
 #Litz Cord Locations 
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 #Pit Tag Data from Litz Cords 
@@ -114,34 +117,49 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 
 # Leaflet Plot ----
  
-leaflet(litz_locs %>% mutate(Side_Channel = 
-               c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   , 
-                 "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
-                  "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
-                  "NA"   ,"HRSC 7", "HRSC 8")) %>%
-                filter(Side_Channel != "NA" ) %>%
-                mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-                mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
-                mutate(sum_col = channel_complex %>% 
-                         filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
-                         filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
-                         count(SC) %>% 
-                         complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
-                                           'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
-                                  fill = list(n = 0)) %>%
-                         pull(n))) %>%
-   
+# nested <- channel_complex %>%
+#    filter(between(as.Date(channel_complex$min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>%
+#     mutate(plots = map2 (
+#   
+#          ggplot(data = .SC, aes(cut.POSIXt(min_det,"day"))) + 
+#          geom_bar() + 
+#          labs(title = "Henry's Reach Side Channel 8" , 
+#               x = "Date", y = "Number of Detections") 
+#))
+ 
+ leaflet_plot_data <-litz_locs %>% mutate(Side_Channel = 
+                                            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   , 
+                                              "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+                                              "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+                                              "NA"   ,"HRSC 7", "HRSC 8")) %>%
+   filter(Side_Channel != "NA" ) %>%
+   mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
+   mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
+   mutate(sum_col = channel_complex %>% 
+            filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
+            filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
+            count(SC) %>% 
+            complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
+                            'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
+                     fill = list(n = 0)) %>%
+            pull(n))
+ 
+ 
+leaflet(leaflet_plot_data) %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
-   setView(lng = -113.627, lat = 44.899, zoom = 15.5) %>%
-   addCircles(lng = ~Longitude, lat = ~Latitude, label = ~Side_Channel,
+   setView(lng = -113.625, lat = 44.8974, zoom = 20) %>%
+   addCircles(data = leaflet_plot_data %>% filter(complex == "Lower HRSC"),
+              lng = ~Longitude, lat = ~Latitude, 
+              label = ~Side_Channel,
               radius = 2,
               color =~Color, 
               opacity = 1,
               fillOpacity = 1,
               popup = ~paste(  "Mar 01 - Apr 18" ,
-                               "<br/>" ,
-                                "Detection =", sum_col ),
+                                   "<br/>" ,
+                             "Detection =", sum_col ),
+                      
               labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE,
                                           textsize = "12px",
                                           style = list("color" = "black" ))) %>%
@@ -169,13 +187,16 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
  
 #Daily Detection Plots ----
  
+ x_axis_by_day <- scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d"))
+ 
  ggplot( channel_complex %>% 
            filter(Complex == "Lower HRSC",
                   between(as.Date(min_det),as.Date("2022-04-20"),as.Date("2022-05-18"))), 
          
          aes(x=as.Date(min_det), fill = as.factor(SC))) +
    geom_bar(color = "black") + 
-   scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d")) + 
+   x_axis_by_day + 
+   #scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d")) + 
    labs(title = "Daily Detections : Lower HRSC", x="Date",
         y = "Number of detections", fill = "Side Channel") +
    theme(axis.text = element_text(size=12),
@@ -220,22 +241,27 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
 
 # Lemhi CFS and Daily Dets ---- 
 
- #   daily_dets <- as.data.frame(table(
- #     pittag_data_raw %>%
- #       mutate(day = as.Date(min_det, format = "%d")) %>% 
- #       dplyr::select(day) %>% 
- #       filter(between(day, as.Date("2022-03-01"),as.Date("2022-05-18")))
- #   )) 
- # daily_dets[1] <- as.Date(daily_dets$day) 
- # 
- # daily_dets_complete <- daily_dets %>% pad %>%
- #   fill_by_value(Freq)
- # 
- # ggplot(daily_dets, aes( x=day , y=Freq ))+ 
- #  geom_line() 
- # 
- # ggplot(Lemhi_discharge, aes(x = day, y=cfs)) + 
- #   geom_line()
+   daily_dets <- as.data.frame(table(
+     channel_complex %>%
+       filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
+       #mutate(day = as.Date(min_det, format = "%d")) %>%
+       dplyr::select(min_det) %>%
+       filter(between(min_det, as.Date("2022-03-01"),as.Date("2022-05-18")))))
+ 
+ 
+
+ daily_dets_complete <- daily_dets %>% pad %>%
+   fill_by_value(Freq) %>%
+   add_row(min_det = c(seq.Date("2022-03-01","2022-03-07","day")),
+           freq = c(0,0,0,0,0,0,0,0))
+ 
+
+
+ ggplot(daily_dets_complete, aes( x=day , y=Freq ))+
+  geom_line() 
+
+ ggplot(Lemhi_discharge, aes(x = day, y=cfs)) +
+   geom_line()
  
 
  
