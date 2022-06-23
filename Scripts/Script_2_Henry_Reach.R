@@ -17,6 +17,7 @@ library(dataRetrieval)
 library(padr)
 library(here)
 library(leafpop)
+library(glue)
 
 setwd(here())
 #Litz Cord Locations 
@@ -27,6 +28,11 @@ pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
                    raster::brick()), fact = 10)
                    ortho[ortho == 0] <- NA
+                   
+ortho_spring <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced_spring_22.tif') %>%
+                   raster::brick()), fact = 10)
+                   ortho_spring[ortho_spring == 0] <- NA
+                   
 #Lemhi River Basin Shape File 
 Lemhi_200_sf <- st_transform(st_read("Data/shapefiles/Lemhi_200_rch/Lemhi_200.shp"), '+proj=longlat +datum=WGS84') 
 
@@ -117,38 +123,49 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 
 # Leaflet Plot ----
  
-# nested <- channel_complex %>%
-#    filter(between(as.Date(channel_complex$min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>%
-#     mutate(plots = map2 (
-#   
-#          ggplot(data = .SC, aes(cut.POSIXt(min_det,"day"))) + 
-#          geom_bar() + 
-#          labs(title = "Henry's Reach Side Channel 8" , 
-#               x = "Date", y = "Number of Detections") 
-#))
+ leaflet_popup_graphs <- channel_complex %>%
+   filter(between(as.Date(channel_complex$min_det),as.Date("2022-01-01"),as.Date("2022-05-18"))) %>%
+   group_by(SC) %>%
+   nest() %>% 
+   filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
+   
+   mutate(ggs = purrr :: map2(
+     data, SC,
+     
+     ~ ggplot(data = .x %>% group_by(date = as.Date(min_det), SC ) %>% 
+                summarise(n=n()) %>% 
+                filter(!SC %in% c("SRSC 1","SRSC 2")), 
+              aes( x = date , y = cumsum(n))) + 
+       
+       ggtitle(glue("Henry's Reach Side Channel {.y}")) +
+       geom_line() + geom_point()+
+       labs( x = "Date", y = "Cumulative Detections") + 
+       scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) + 
+       theme(axis.text = element_text(size=14),
+             axis.title = element_text(size = 16, face = "bold"),
+             plot.caption = element_text(hjust = 0, size = 14),
+             title = element_text(size = 16, face = "bold"))
+   )) %>%
+   slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
+                 "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC))
  
- leaflet_plot_data <-litz_locs %>% mutate(Side_Channel = 
-                                            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   , 
-                                              "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
-                                              "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
-                                              "NA"   ,"HRSC 7", "HRSC 8")) %>%
+ leaflet_plot_data <-litz_locs %>%
+   mutate(Side_Channel = 
+           c("NA"   ,  "NA"  ,  "NA"   , "HRSC 1",  "NA"   , 
+            "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
+             "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
+             "NA"   ,"HRSC 7", "HRSC 8")) %>%
    filter(Side_Channel != "NA" ) %>%
    mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
    mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
-   mutate(sum_col = channel_complex %>% 
-            filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
-            filter(between(as.Date(min_det),as.Date("2022-03-01"),as.Date("2022-05-18"))) %>% 
-            count(SC) %>% 
-            complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
-                            'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'), 
-                     fill = list(n = 0)) %>%
-            pull(n))
+   mutate(plots_id = leaflet_popup_graphs$SC ) %>%
+   mutate(plots = leaflet_popup_graphs$ggs )
  
- 
+
 leaflet(leaflet_plot_data) %>%
    addProviderTiles('Esri.WorldImagery') %>%
-   addRasterRGB(ortho , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
-   setView(lng = -113.625, lat = 44.8974, zoom = 20) %>%
+   addRasterRGB(ortho_spring , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
+   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%
    addCircles(data = leaflet_plot_data %>% filter(complex == "Lower HRSC"),
               lng = ~Longitude, lat = ~Latitude, 
               label = ~Side_Channel,
@@ -156,10 +173,9 @@ leaflet(leaflet_plot_data) %>%
               color =~Color, 
               opacity = 1,
               fillOpacity = 1,
-              popup = ~paste(  "Mar 01 - Apr 18" ,
-                                   "<br/>" ,
-                             "Detection =", sum_col ),
-                      
+              popup = popupGraph(filter(leaflet_plot_data,complex == "Lower HRSC")$plots, 
+                                width = 550, 
+                                height = 250),
               labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE,
                                           textsize = "12px",
                                           style = list("color" = "black" ))) %>%
@@ -255,16 +271,36 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
    add_row(min_det = c(seq.Date("2022-03-01","2022-03-07","day")),
            freq = c(0,0,0,0,0,0,0,0))
  
-
-
  ggplot(daily_dets_complete, aes( x=day , y=Freq ))+
   geom_line() 
 
  ggplot(Lemhi_discharge, aes(x = day, y=cfs)) +
    geom_line()
  
+#Cumulative Line Plot-----
+ 
+ ggplot(channel_complex %>% 
+          group_by(date = as.Date(min_det), SC ) %>% 
+          summarise(n=n()) %>% 
+          filter(!SC %in% c("SRSC 1","SRSC 2")), 
+        
+        aes(x = date , y = cumsum(n) , color = as.factor(SC) ))+ 
+   geom_line()  
+ 
+ 
+ (channel_complex %>% 
+   group_by(date = as.Date(min_det), SC ) %>% 
+   summarise(n=n()) %>% 
+   filter(!SC %in% c("SRSC 1","SRSC 2")))$date
+
+ cumsum((channel_complex %>% 
+     group_by(date = as.Date(min_det), SC ) %>% 
+     summarise(n=n()) %>% 
+     filter(!SC %in% c("SRSC 1","SRSC 2")))$n)
 
  
+
+
  
  
  

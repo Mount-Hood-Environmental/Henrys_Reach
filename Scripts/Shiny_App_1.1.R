@@ -18,9 +18,17 @@ library(here)
 setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
-ortho <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
-         raster::brick()), fact = 3)
-         ortho[ortho == 0] <- NA
+
+res_of_ortho <- 3
+
+ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
+         raster::brick()), fact = res_of_ortho)
+         ortho_fall[ortho_fall == 0] <- NA
+         
+ortho_spring <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced_spring_22.tif') %>%
+        raster::brick()), fact = res_of_ortho)
+        ortho_spring[ortho_spring == 0] <- NA
+         
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
 channel_complex <- pittag_data_raw %>% 
@@ -46,7 +54,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
        tabsetPanel(
          tabPanel("Site Detection", 
                        dateRangeInput('daterange','Select Date Range',
-                              start = "2022-03-01",
+                              start = "2022-01-01",
                               end   = "2022-05-18",
                               min   = as.Date(min(pittag_data_raw$min_det)),
                               max   = as.Date(max(pittag_data_raw$min_det))),
@@ -63,7 +71,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
  column(width  = 5, 
         offset = 0, 
         radioButtons('ortho_choice', 'Orthomosaic', 
-                     choices = c('Display', 'Remove'),
+                     choices = c('Fall', 'Spring'),
                      inline = TRUE), 
         leafletOutput('SC_map', height = "85vh"))
    
@@ -71,6 +79,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
 ) #fluidPage
 
 server <- function(input,output,session){
+  
 
 #Detection Data ----    
   output$bar_graph <- renderPlot({
@@ -109,6 +118,42 @@ server <- function(input,output,session){
 # Leaflet Map---- 
   output$SC_map <- renderLeaflet({
     
+    if (input$daterange[2]-input$daterange[1]<=10) {
+      x_axis_args_leaf <- scale_x_date(date_breaks = "1 day" , labels = date_format("%b %d"))
+    } else if (input$daterange[2]-input$daterange[1]<=75) {
+      x_axis_args_leaf <- scale_x_date(date_breaks = "1 week" , labels = date_format("%b %d"))
+    }else{
+      x_axis_args_leaf <- scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
+    }
+    
+    leaflet_popup_graphs <- channel_complex %>%
+      filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
+      group_by(SC) %>%
+      nest() %>% 
+      filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
+      
+      mutate(ggs = purrr :: map2(
+        data, SC,
+        
+        ~ ggplot(data = .x %>% group_by(date = as.Date(min_det), SC ) %>% 
+                   summarise(n=n()) %>% 
+                   filter(!SC %in% c("SRSC 1","SRSC 2")), 
+                 aes( x = date , y = cumsum(n))) + 
+          
+          ggtitle(glue("Henry's Reach Side Channel {.y}")) +
+          geom_line() + geom_point()+
+          labs( x = "Date", y = "Cumulative Detections") + 
+          x_axis_args_leaf + 
+          theme(axis.text = element_text(size=14),
+                axis.title = element_text(size = 16, face = "bold"),
+                plot.caption = element_text(hjust = 0, size = 14),
+                title = element_text(size = 16, face = "bold")))) %>%
+      
+      slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
+                    "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC))
+    
+    
+    
    leaflet_plot_data <- litz_locs %>% mutate(Side_Channel =
                            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
                              "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
@@ -118,14 +163,8 @@ server <- function(input,output,session){
       mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
       mutate(Color = c("#3300CC", "#E69F00", "#3300CC", "#E69F00",
                        "#56B4E9", "#F0E442", "#0072B2", "#D55E00")) %>%
-      mutate(sum_col = channel_complex %>%
-               filter(!SC %in% c("SRSC 1","SRSC 2")) %>%
-               filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
-               count(SC) %>%
-               complete(SC = c('HRSC 1','HRSC 2', 'HRSC 3', 'HRSC 4',
-                               'HRSC 5','HRSC 6', 'HRSC 7', 'HRSC 8'),
-                        fill = list(n = 0)) %>%
-               pull(n))
+     mutate(plots_id = leaflet_popup_graphs$SC ) %>%
+     mutate(plots = leaflet_popup_graphs$ggs )
 
    
   leaf_plot <- leaflet(leaflet_plot_data) %>%
@@ -141,24 +180,22 @@ server <- function(input,output,session){
                                              direction = "bottom",
                                              textsize = "12px",
                                              style = list("color" = "black" )),
-                 popup = ~paste(  Side_Channel,
-                                  "<br/>",
-                                  format(input$daterange[1],"%b %d"), "-" ,format(input$daterange[2],"%b %d"),
-                                  "<br/>" ,
-                                  "Detection =", sum_col ))
+                 popup =  popupGraph(filter(leaflet_plot_data,complex == input$Complex)$plots, 
+                                     width = 550, 
+                                     height = 250))
 
   
-   if (input$ortho_choice == "Display" && input$Complex == "Lower HRSC") {
-     addRasterRGB(leaf_plot, ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+   if (input$ortho_choice == "Fall" && input$Complex == "Lower HRSC") {
+     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
      setView(lng = -113.627, lat = 44.8995, zoom = 17)
-   } else if (input$ortho_choice == "Display" && input$Complex == "Upper HRSC") { 
-     addRasterRGB(leaf_plot, ortho , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+   } else if (input$ortho_choice == "Fall" && input$Complex == "Upper HRSC") { 
+     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
      setView(lng = -113.625, lat = 44.8974, zoom = 20)
-   } else if (input$ortho_choice == "Remove" && input$Complex == "Lower HRSC"){
-     leaf_plot %>%
+   } else if (input$ortho_choice == "Spring" && input$Complex == "Lower HRSC"){
+     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
      setView(lng = -113.627, lat = 44.8995, zoom = 17)
    } else {
-     leaf_plot %>%
+     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
      setView(lng = -113.625, lat = 44.8974, zoom = 20) 
    }
   
