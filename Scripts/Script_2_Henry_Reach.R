@@ -124,7 +124,7 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 # Leaflet Plot ----
  
  leaflet_popup_graphs <- channel_complex %>%
-   filter(between(as.Date(channel_complex$min_det),as.Date("2022-01-01"),as.Date("2022-05-18"))) %>%
+   filter(between(as.Date(channel_complex$min_det),as.Date("2022-05-01"),as.Date("2022-05-18"))) %>%
    group_by(SC) %>%
    nest() %>% 
    filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
@@ -135,7 +135,7 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
      ~ ggplot(data = .x %>% group_by(date = as.Date(min_det), SC ) %>% 
                 summarise(n=n()) %>% 
                 filter(!SC %in% c("SRSC 1","SRSC 2")), 
-              aes( x = date , y = cumsum(n))) + 
+                aes( x = date , y = cumsum(n))) + 
        
        ggtitle(glue("Henry's Reach Side Channel {.y}")) +
        geom_line() + geom_point()+

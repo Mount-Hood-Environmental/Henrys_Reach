@@ -1,7 +1,7 @@
 # Authors: Bridger Bertram
 # Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
 # Created: May 15
-# Last Modified: June 14
+# Last Modified: June 24
 
 # Load Packages and Data ------
 library(tidyverse)
@@ -14,6 +14,8 @@ library(shiny)
 library(shinythemes)
 library(scales)
 library(here)
+library(glue)
+library(leafpop)
 
 setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
@@ -49,10 +51,11 @@ channel_complex <- pittag_data_raw %>%
 # ui ----
 ui <- fluidPage(theme = shinytheme("spacelab"),
   titlePanel("Henry's Reach"),
-   fluidRow(
-      column(7,
+
        tabsetPanel(
          tabPanel("Site Detection", 
+           fluidRow(
+            column(width = 7,        
                        dateRangeInput('daterange','Select Date Range',
                               start = "2022-01-01",
                               end   = "2022-05-18",
@@ -62,20 +65,21 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                           column(width = 6, selectInput('Complex','Side Channel Complex',choices = c("Lower HRSC","Upper HRSC"))),
                           column(width = 6,selectInput('time_frame','Detections by...',choices = c("day","week"), selected = "week"))
                                 ),  #fluidRow (select inputs)
-                        plotOutput('bar_graph')),
-         tabPanel("in Development",
-                  title = "Fish Movement"
-                  ), #tabPanel "fish movement"
-              ), #tabsetPanel (main)
-             ), #column
- column(width  = 5, 
-        offset = 0, 
-        radioButtons('ortho_choice', 'Orthomosaic', 
+                        plotOutput('bar_graph', height = "50vh")),
+
+            column(width  = 5, 
+                   offset = 0, 
+                   radioButtons('ortho_choice', 'Orthomosaic', 
                      choices = c('Fall', 'Spring'),
                      inline = TRUE), 
-        leafletOutput('SC_map', height = "85vh"))
-   
-  ), #fluidRow
+                   leafletOutput('SC_map', height = "70vh"))
+                   ), #fluidRow
+                  ), #tabPannel "Site Detection"
+ 
+ 
+ tabPanel("in Development",
+          title = "Fish Movement"), #tabPanel "fish movement"
+                 ), #tabsetPanel (main)
 ) #fluidPage
 
 server <- function(input,output,session){
@@ -111,10 +115,6 @@ server <- function(input,output,session){
                                    "#F0E442", "#0072B2", "#D55E00"))
   })
 
-# Fish Movement ----
-  
-   #In Development
-  
 # Leaflet Map---- 
   output$SC_map <- renderLeaflet({
     
@@ -141,14 +141,13 @@ server <- function(input,output,session){
                  aes( x = date , y = cumsum(n))) + 
           
           ggtitle(glue("Henry's Reach Side Channel {.y}")) +
-          geom_line() + geom_point()+
+          geom_line(size = 1) + geom_point(color = "cyan", size = 2)+
           labs( x = "Date", y = "Cumulative Detections") + 
           x_axis_args_leaf + 
           theme(axis.text = element_text(size=14),
                 axis.title = element_text(size = 16, face = "bold"),
                 plot.caption = element_text(hjust = 0, size = 14),
                 title = element_text(size = 16, face = "bold")))) %>%
-      
       slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
                     "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC))
     
@@ -200,6 +199,10 @@ server <- function(input,output,session){
    }
   
   })
+
+  # Fish Movement ----
   
+  #In Development
+    
 }
 shinyApp(ui=ui,server=server)
