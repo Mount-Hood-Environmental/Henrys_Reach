@@ -151,10 +151,10 @@ names(plot.data)[1] <- "Y2021"
 
 dates.plot<-plot.data$Day
 
-png(filename = paste(siteName," Discharge.png", sep = ""),
-    width = 7.5, height = 5.5,units = "in", pointsize = 12,
-    bg = "white", res = 600, family = "", restoreConsole = TRUE,
-    type = c("windows", "cairo", "cairo-png"), antialias="cleartype")
+#png(filename = paste(siteName," Discharge.png", sep = ""),
+#    width = 7.5, height = 5.5,units = "in", pointsize = 12,
+#    bg = "white", res = 600, family = "", restoreConsole = TRUE,
+#    type = c("windows", "cairo", "cairo-png"), antialias="cleartype")
 
 plot(plot.data$Day, plot.data$Mean, type="n",
      ylim=c(0,max(plot.data$Max)), ylab="Discharge (cfs)",
@@ -174,12 +174,11 @@ lines(plot.data$Day,plot.data$Y2021,lwd=1.5,lty=2,col="green4")
 lines(plot.data$Day,plot.data$Mean,lwd=1.5,lty=3,col="red")
 lines(plot.data$Day,plot.data$Y2022,lwd=2.5,col="blue")
 
-
 legend("topleft", col = c("blue","green4","red",NA), lty = c(1,2,3,NA),bg="white",box.col=1, 
        lwd = c(2.5,1.5,1.5,NA),fill=c(NA,NA,NA,"gray90"),border=c(NA,NA,NA,"gray90"), 
        legend = c( paste("2022 through", Sys.Date()),"2021 actual","1978-2021 average","1978-2021 range"))
 
-dev.off() 
+#dev.off() 
 
 
 
