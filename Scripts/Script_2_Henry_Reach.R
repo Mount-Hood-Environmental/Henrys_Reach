@@ -124,15 +124,16 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 # Leaflet Plot ----
  
  leaflet_popup_graphs <- channel_complex %>%
-   filter(between(as.Date(channel_complex$min_det),as.Date("2022-05-01"),as.Date("2022-05-18"))) %>%
+   filter(between(as.Date(channel_complex$min_det),as.Date("2022-05-11"),as.Date("2022-05-18"))) %>%
    group_by(SC) %>%
    nest() %>% 
    filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
-   
+  
    mutate(ggs = purrr :: map2(
      data, SC,
      
-     ~ ggplot(data = .x %>% group_by(date = as.Date(min_det), SC ) %>% 
+     ~ ggplot(data = .x %>% 
+                group_by(date = as.Date(min_det), SC ) %>% 
                 summarise(n=n()) %>% 
                 filter(!SC %in% c("SRSC 1","SRSC 2")), 
                 aes( x = date , y = cumsum(n))) + 
@@ -147,7 +148,16 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
              title = element_text(size = 16, face = "bold"))
    )) %>%
    slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
-                 "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC))
+                 "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC)) 
+   
+ if ( leaflet_popup_graphs[1,1] != "HRSC 1") {new_row_1 = c(SC = "HRSC 1", data = as.list(NA), ggs = NA)}
+ if ( leaflet_popup_graphs[1,2] != "HRSC 2") {new_row_2 = c(SC = "HRSC 2", data = as.list(NA), ggs = NA)}
+ 
+ leaflet_popup_graphs <- rbind( leaflet_popup_graphs,new_row_1,new_row_2 ) 
+ 
+ leaflet_popup_graphs <- leaflet_popup_graphs %>%  slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
+                                                                 "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC)) 
+ 
  
  leaflet_plot_data <-litz_locs %>%
    mutate(Side_Channel = 
@@ -159,27 +169,34 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
    mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
    mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
    mutate(plots_id = leaflet_popup_graphs$SC ) %>%
-   mutate(plots = leaflet_popup_graphs$ggs )
- 
+   mutate(plots = leaflet_popup_graphs$ggs ) %>% 
+   mutate(has_ggplot = sapply(plots, is.null))
 
+ 
 leaflet(leaflet_plot_data) %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho_spring , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
-   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%
-   addCircles(data = leaflet_plot_data %>% filter(complex == "Lower HRSC"),
-              lng = ~Longitude, lat = ~Latitude, 
-              label = ~Side_Channel,
-              radius = 2,
-              color =~Color, 
-              opacity = 1,
-              fillOpacity = 1,
-              popup = popupGraph(filter(leaflet_plot_data,complex == "Lower HRSC")$plots, 
-                                width = 550, 
-                                height = 250),
-              labelOptions = labelOptions(noHide = TRUE, textOnly = TRUE,
-                                          textsize = "12px",
-                                          style = list("color" = "black" ))) %>%
-   leaflet::addLegend(labels = ~unique(complex),color = ~unique(Color))
+   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>% 
+   addCircles(data = leaflet_plot_data,
+             lng = ~Longitude, lat = ~Latitude,
+             radius = 2,
+             color =~Color,
+             opacity = 1,
+             fillOpacity = 1,
+             label = ~Side_Channel,
+             labelOptions = labelOptions(noHide = TRUE,
+                                         direction = "bottom",
+                                         textsize = "12px",
+                                         style = list("color" = "black" )),
+              
+             popup = ifelse(leaflet_plot_data$has_ggplot == FALSE,
+                                 popupGraph(leaflet_plot_data$plots,
+                                 width = 550,
+                                 height = 250),print("no data")))
+
+
+
+
  
 # Shape File Leaflet ----
 leaflet(    litz_locs %>% mutate(Side_Channel = 

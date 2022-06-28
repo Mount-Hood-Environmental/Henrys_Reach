@@ -21,7 +21,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
-res_of_ortho <- 3
+res_of_ortho <- 10
 
 ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
          raster::brick()), fact = res_of_ortho)
