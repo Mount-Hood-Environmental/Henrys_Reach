@@ -44,7 +44,15 @@ channel_complex <- pittag_data_raw %>%
               ifelse(node %in% 14:16, "HRSC 6",
               ifelse(node ==   17,    "HRSC 7",
               ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
-#Create another column that combines side channels into complexes.         
+  mutate(Color = ifelse(SC == "HRSC 1", "#3300CC",
+                 ifelse(SC == "HRSC 2", "#E69F00",
+                 ifelse(SC == "HRSC 3", "#FF0000",
+                 ifelse(SC == "HRSC 4", "#00FFFF",
+                 ifelse(SC == "HRSC 5", "#56B4E9",
+                 ifelse(SC == "HRSC 6", "#F0E442",
+                 ifelse(SC == "HRSC 7", "#0072B2",
+                 ifelse(SC == "HRSC 8", "#D55E00",0 ))))))))) %>%
+        
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
 
@@ -62,8 +70,9 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                               min   = as.Date(min(pittag_data_raw$min_det)),
                               max   = as.Date(max(pittag_data_raw$min_det))),
                         fluidRow(
-                          column(width = 6, selectInput('Complex','Side Channel Complex',choices = c("Lower HRSC","Upper HRSC"))),
-                          column(width = 6,selectInput('time_frame','Detections by...',choices = c("day","week"), selected = "week"))
+                          column(width = 6, checkboxGroupInput('Complex','Side Channel Complex',choices = c("Lower HRSC","Upper HRSC"), 
+                                                               selected = c("Lower HRSC", "Upper HRSC"))),
+                          column(width = 6, selectInput('time_frame','Detections by...',choices = c("day","week"), selected = "week"))
                                 ),  #fluidRow (select inputs)
                         plotOutput('bar_graph', height = "50vh")),
 
@@ -98,7 +107,7 @@ server <- function(input,output,session){
     
     ggplot(channel_complex %>%
            filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]),
-           Complex == input$Complex) %>%
+           Complex %in% input$Complex) %>%
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
            aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
       geom_bar(color = "black") +
@@ -111,8 +120,8 @@ server <- function(input,output,session){
             axis.title = element_text(size = 16, face = "bold"),
             plot.caption = element_text(hjust = 0, size = 14),
             title = element_text(size = 16, face = "bold")) + 
-      scale_fill_manual(values = c("#3300CC", "#E69F00", "#56B4E9",
-                                   "#F0E442", "#0072B2", "#D55E00"))
+      scale_fill_manual(values = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
+                                   "#56B4E9", "#F0E442", "#0072B2", "#D55E00"))
   })
 
 # Leaflet Map---- 
@@ -160,7 +169,7 @@ server <- function(input,output,session){
                              "NA"   ,"HRSC 7", "HRSC 8")) %>%
       filter(Side_Channel != "NA") %>%
       mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-      mutate(Color = c("#3300CC", "#E69F00", "#3300CC", "#E69F00",
+      mutate(Color = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
                        "#56B4E9", "#F0E442", "#0072B2", "#D55E00")) %>%
      mutate(plots_id = leaflet_popup_graphs$SC ) %>%
      mutate(plots = leaflet_popup_graphs$ggs )
@@ -168,10 +177,13 @@ server <- function(input,output,session){
    
   leaf_plot <- leaflet(leaflet_plot_data) %>%
       addProviderTiles('Esri.WorldImagery') %>%
-      addCircles(data = leaflet_plot_data %>% filter(complex == input$Complex),
+      setView(lng = -113.627, lat = 44.8995, zoom = 17)%>%
+      addCircles(data = leaflet_plot_data %>% filter(complex %in% input$Complex),
                  lng = ~Longitude, lat = ~Latitude,
                  radius = 2,
-                 color =~Color,
+                 #color =~Color,
+                 color = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
+                           "#56B4E9", "#F0E442", "#0072B2", "#D55E00"),
                  opacity = 1,
                  fillOpacity = 1,
                  label = ~Side_Channel,
@@ -179,24 +191,15 @@ server <- function(input,output,session){
                                              direction = "bottom",
                                              textsize = "12px",
                                              style = list("color" = "black" )),
-                 popup =  popupGraph(filter(leaflet_plot_data,complex == input$Complex)$plots, 
+                 popup =  popupGraph(filter(leaflet_plot_data,complex %in% input$Complex)$plots, 
                                      width = 550, 
                                      height = 250))
 
   
-   if (input$ortho_choice == "Fall" && input$Complex == "Lower HRSC") {
-     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-     setView(lng = -113.627, lat = 44.8995, zoom = 17)
-   } else if (input$ortho_choice == "Fall" && input$Complex == "Upper HRSC") { 
-     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-     setView(lng = -113.625, lat = 44.8974, zoom = 20)
-   } else if (input$ortho_choice == "Spring" && input$Complex == "Lower HRSC"){
-     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-     setView(lng = -113.627, lat = 44.8995, zoom = 17)
+   if (input$ortho_choice == "Fall") {
+     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)
    } else {
-     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-     setView(lng = -113.625, lat = 44.8974, zoom = 20) 
-   }
+     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) }
   
   })
 

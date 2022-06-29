@@ -56,7 +56,6 @@ channel_complex <- pittag_data_raw %>%
               ifelse(node %in% 14:16, "HRSC 6",
               ifelse(node ==   17,    "HRSC 7",
               ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
-  #Create another column that combines side channels into complexes.         
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
 
