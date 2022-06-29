@@ -21,7 +21,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
-res_of_ortho <- 10
+res_of_ortho <- 3
 
 ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
          raster::brick()), fact = res_of_ortho)
@@ -30,7 +30,9 @@ ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>
 ortho_spring <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced_spring_22.tif') %>%
         raster::brick()), fact = res_of_ortho)
         ortho_spring[ortho_spring == 0] <- NA
-         
+        
+ HW_shp_lemhi <- st_transform(st_read("Data/shapefiles/Henry_HighW.gpkg"), '+proj=longlat +datum=WGS84') 
+ LW_shp_lemhi <- st_transform(st_read("Data/shapefiles/Henry_LowW.gpkg"), '+proj=longlat +datum=WGS84')                 
 
 # Modify Data structure. Create new column that combines "nodes" in side channels "SC".
 channel_complex <- pittag_data_raw %>% 
@@ -44,15 +46,6 @@ channel_complex <- pittag_data_raw %>%
               ifelse(node %in% 14:16, "HRSC 6",
               ifelse(node ==   17,    "HRSC 7",
               ifelse(node ==   18,    "HRSC 8",0))))))))))) %>%
-  mutate(Color = ifelse(SC == "HRSC 1", "#3300CC",
-                 ifelse(SC == "HRSC 2", "#E69F00",
-                 ifelse(SC == "HRSC 3", "#FF0000",
-                 ifelse(SC == "HRSC 4", "#00FFFF",
-                 ifelse(SC == "HRSC 5", "#56B4E9",
-                 ifelse(SC == "HRSC 6", "#F0E442",
-                 ifelse(SC == "HRSC 7", "#0072B2",
-                 ifelse(SC == "HRSC 8", "#D55E00",0 ))))))))) %>%
-        
   mutate(Complex = ifelse(SC %in% c("HRSC 1", "HRSC 2"), "Upper HRSC",
                    ifelse(SC %in% c("SRSC 1", "SRSC 2"),  "SRSC" , "Lower HRSC")))
 
@@ -70,9 +63,22 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                               min   = as.Date(min(pittag_data_raw$min_det)),
                               max   = as.Date(max(pittag_data_raw$min_det))),
                         fluidRow(
-                          column(width = 6, checkboxGroupInput('Complex','Side Channel Complex',choices = c("Lower HRSC","Upper HRSC"), 
-                                                               selected = c("Lower HRSC", "Upper HRSC"))),
-                          column(width = 6, selectInput('time_frame','Detections by...',choices = c("day","week"), selected = "week"))
+                          column(width = 4, "Upper Henry's Reach" ,
+                                 checkboxGroupInput('Complex_1',label = NULL,choices = c("HRSC 1","HRSC 2"), 
+                                                    selected = c("HRSC 1", "HRSC 2"))),
+                          
+                          column(width = 4, "Lower Henry's Reach",
+                                 
+                              fluidRow(column(6,
+                                           checkboxGroupInput('Complex_2_1', label = NULL, choices = c("HRSC 3","HRSC 4","HRSC 5"), 
+                                                              selected = c("HRSC 3","HRSC 4","HRSC 5"))),
+                                        column(6,
+                                           checkboxGroupInput('Complex_2_2',label = NULL, choices = c("HRSC 6","HRSC 7","HRSC 8"), 
+                                                               selected = c("HRSC 6","HRSC 7","HRSC 8") )))),
+                          
+                          
+                                                               
+                          column(width = 4, selectInput('time_frame','Detections by...',choices = c("day","week"), selected = "week"))
                                 ),  #fluidRow (select inputs)
                         plotOutput('bar_graph', height = "50vh")),
 
@@ -86,10 +92,19 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                   ), #tabPannel "Site Detection"
  
  
- tabPanel("in Development",
-          title = "Fish Movement"), #tabPanel "fish movement"
-                 ), #tabsetPanel (main)
-) #fluidPage
+ tabPanel(title = "Fish Movement", 
+    fluidRow(
+      column(8, 
+        radioButtons('season_choice', label = NULL, 
+                     choices = c('Fall', 'Spring'), 
+                     inline = TRUE),     
+        leafletOutput('shp_map', height = "80vh")     
+      ),
+      column(4)
+    )    
+   ), #tabPanel "fish movement"
+  ), #tabsetPanel (main)
+ ) #fluidPage
 
 server <- function(input,output,session){
   
@@ -106,8 +121,8 @@ server <- function(input,output,session){
     }
     
     ggplot(channel_complex %>%
-           filter(between(as.Date(min_det),input$daterange[1],input$daterange[2]),
-           Complex %in% input$Complex) %>%
+           filter(channel_complex$SC %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) %>% 
+           filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
            aes(x=as.Date(min_det_scaled), fill = as.factor(SC))) +
       geom_bar(color = "black") +
@@ -169,19 +184,17 @@ server <- function(input,output,session){
                              "NA"   ,"HRSC 7", "HRSC 8")) %>%
       filter(Side_Channel != "NA") %>%
       mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
-      mutate(Color = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
-                       "#56B4E9", "#F0E442", "#0072B2", "#D55E00")) %>%
-     mutate(plots_id = leaflet_popup_graphs$SC ) %>%
-     mutate(plots = leaflet_popup_graphs$ggs )
+      mutate(plots_id = leaflet_popup_graphs$SC ) %>%
+      mutate(plots = leaflet_popup_graphs$ggs )
 
    
   leaf_plot <- leaflet(leaflet_plot_data) %>%
-      addProviderTiles('Esri.WorldImagery') %>%
-      setView(lng = -113.627, lat = 44.8995, zoom = 17)%>%
-      addCircles(data = leaflet_plot_data %>% filter(complex %in% input$Complex),
+      addProviderTiles('Esri.WorldImagery',
+       options = providerTileOptions(maxNativeZoom=19,maxZoom=100)) %>%
+      setView(lng = -113.627, lat = 44.8982, zoom = 17)%>%
+      addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
                  lng = ~Longitude, lat = ~Latitude,
                  radius = 2,
-                 #color =~Color,
                  color = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
                            "#56B4E9", "#F0E442", "#0072B2", "#D55E00"),
                  opacity = 1,
@@ -191,7 +204,7 @@ server <- function(input,output,session){
                                              direction = "bottom",
                                              textsize = "12px",
                                              style = list("color" = "black" )),
-                 popup =  popupGraph(filter(leaflet_plot_data,complex %in% input$Complex)$plots, 
+                 popup =  popupGraph(filter(leaflet_plot_data,Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2))$plots, 
                                      width = 550, 
                                      height = 250))
 
@@ -204,8 +217,35 @@ server <- function(input,output,session){
   })
 
   # Fish Movement ----
+  output$shp_map <- renderLeaflet({
   
-  #In Development
+     shp_leaf <- leaflet() %>%
+      addProviderTiles('Esri.WorldImagery',
+          options = providerTileOptions(maxNativeZoom=19,maxZoom=100)) %>%
+      setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%       
+       addCircles(data = leaflet_plot_data,
+                  lng = ~Longitude, lat = ~Latitude,
+                  radius = 2,
+                  color =~Color,
+                  opacity = 1,
+                  fillOpacity = 1,
+                  label = ~Side_Channel,
+                  labelOptions = labelOptions(textsize = "12px",
+                  style = list("color" = "black" )))
+
+    
+     if (input$season_choice == "Fall") {
+       shp_leaf %>%
+       addRasterRGB(ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+       addPolygons(data = LW_shp_lemhi) 
+     } else {
+       shp_leaf %>%
+         addRasterRGB(ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+         addPolygons(data = HW_shp_lemhi)
+       }
+     
+  })
+ 
     
 }
 shinyApp(ui=ui,server=server)

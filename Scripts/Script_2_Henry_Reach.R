@@ -35,6 +35,8 @@ ortho_spring <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced_spring
                    
 #Lemhi River Basin Shape File 
 Lemhi_200_sf <- st_transform(st_read("Data/shapefiles/Lemhi_200_rch/Lemhi_200.shp"), '+proj=longlat +datum=WGS84') 
+HW_shp_lemhi <- st_transform(st_read("Data/shapefiles/Henry_HighW.gpkg"), '+proj=longlat +datum=WGS84') 
+LW_shp_lemhi <- st_transform(st_read("Data/shapefiles/Henry_LowW.gpkg"), '+proj=longlat +datum=WGS84') 
 
 #Lemhi River Discharge data from USGS (Lemhi River Nr Lemhi, ID)
 Lemhi_discharge_raw <- readNWISuv(siteNumbers = "13305000", parameterCd = "00060",startDate = "2022-03-01",endDate = "2022-05-18" )
@@ -123,7 +125,7 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 # Leaflet Plot ----
  
  leaflet_popup_graphs <- channel_complex %>%
-   filter(between(as.Date(channel_complex$min_det),as.Date("2022-05-11"),as.Date("2022-05-18"))) %>%
+   filter(between(as.Date(channel_complex$min_det),as.Date("2022-01-11"),as.Date("2022-05-18"))) %>%
    group_by(SC) %>%
    nest() %>% 
    filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
@@ -149,15 +151,10 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
    slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
                  "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC)) 
    
- if ( leaflet_popup_graphs[1,1] != "HRSC 1") {new_row_1 = c(SC = "HRSC 1", data = as.list(NA), ggs = NA)}
- if ( leaflet_popup_graphs[1,2] != "HRSC 2") {new_row_2 = c(SC = "HRSC 2", data = as.list(NA), ggs = NA)}
  
- leaflet_popup_graphs <- rbind( leaflet_popup_graphs,new_row_1,new_row_2 ) 
+
  
- leaflet_popup_graphs <- leaflet_popup_graphs %>%  slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
-                                                                 "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC)) 
- 
- 
+    
  leaflet_plot_data <-litz_locs %>%
    mutate(Side_Channel = 
            c("NA"   ,  "NA"  ,  "NA"   , "HRSC 1",  "NA"   , 
@@ -168,11 +165,11 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
    mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))%>%
    mutate(Color = c("cyan","cyan",rep("coral",6))) %>%
    mutate(plots_id = leaflet_popup_graphs$SC ) %>%
-   mutate(plots = leaflet_popup_graphs$ggs ) %>% 
-   mutate(has_ggplot = sapply(plots, is.null))
+   mutate(plots = leaflet_popup_graphs$ggs )
 
- 
-leaflet(leaflet_plot_data) %>%
+
+   
+  leaflet(leaflet_plot_data) %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho_spring , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
    setView(lng = -113.627, lat = 44.8995, zoom = 17) %>% 
@@ -188,34 +185,31 @@ leaflet(leaflet_plot_data) %>%
                                          textsize = "12px",
                                          style = list("color" = "black" )),
               
-             popup = ifelse(leaflet_plot_data$has_ggplot == FALSE,
-                                 popupGraph(leaflet_plot_data$plots,
-                                 width = 550,
-                                 height = 250),print("no data")))
+             popup = popupGraph(leaflet_plot_data$plots,
+                         width = 550,
+                         height = 250))
 
 
 
 
  
 # Shape File Leaflet ----
-leaflet(    litz_locs %>% mutate(Side_Channel = 
-                                 c("SRSC 1",  "NA"  , "SRSC 2", "HRSC 1",  "NA"   , 
-                                   "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4", 
-                                   "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   , 
-                                   "NA"   ,"HRSC 7", "HRSC 8")) %>%
-            filter(Side_Channel != "NA") %>%
-            mutate(complex = c("SRSC","NA","Upper HRSC","NA",rep("NA",5),"Lower HRSC"))%>%
-            filter(complex != "NA")) %>%
-   
-setView(lng = -113.627, lat = 44.887, zoom = 13.45) %>% 
-addProviderTiles(providers$CartoDB.Positron) %>%
-addPolygons(data = Lemhi_200_sf) %>%
-addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
-             radius = 10,
-             color = 'red',
-             labelOptions = labelOptions(noHide = TRUE, offset=c(0,0), textOnly = TRUE,
-                                         textsize = "10px"))
- 
+
+ leaflet() %>%
+   addProviderTiles('Esri.WorldImagery') %>%
+   addRasterRGB(ortho, na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
+   addPolygons(data = LW_shp_lemhi) %>%
+   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>% 
+   addCircles(data = leaflet_plot_data,
+              lng = ~Longitude, lat = ~Latitude,
+              radius = 2,
+              color =~Color,
+              opacity = 1,
+              fillOpacity = 1,
+              label = ~Side_Channel,
+              labelOptions = labelOptions(textsize = "12px",
+                                          style = list("color" = "black" )))
+              
  
 #Daily Detection Plots ----
  
@@ -293,29 +287,11 @@ addCircles(lng = ~Longitude, lat = ~Latitude, label = ~complex,
  ggplot(Lemhi_discharge, aes(x = day, y=cfs)) +
    geom_line()
  
-#Cumulative Line Plot-----
- 
- ggplot(channel_complex %>% 
-          group_by(date = as.Date(min_det), SC ) %>% 
-          summarise(n=n()) %>% 
-          filter(!SC %in% c("SRSC 1","SRSC 2")), 
-        
-        aes(x = date , y = cumsum(n) , color = as.factor(SC) ))+ 
-   geom_line()  
- 
- 
- (channel_complex %>% 
-   group_by(date = as.Date(min_det), SC ) %>% 
-   summarise(n=n()) %>% 
-   filter(!SC %in% c("SRSC 1","SRSC 2")))$date
 
- cumsum((channel_complex %>% 
-     group_by(date = as.Date(min_det), SC ) %>% 
-     summarise(n=n()) %>% 
-     filter(!SC %in% c("SRSC 1","SRSC 2")))$n)
 
- 
-
+  
+  
+  
 
  
  
