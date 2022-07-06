@@ -21,7 +21,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
-res_of_ortho <- 3
+res_of_ortho <- 10
 
 ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
          raster::brick()), fact = res_of_ortho)
@@ -65,16 +65,16 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                         fluidRow(
                           column(width = 4, "Upper Henry's Reach" ,
                                  checkboxGroupInput('Complex_1',label = NULL,choices = c("HRSC 1","HRSC 2"), 
-                                                    selected = c("HRSC 1", "HRSC 2"))),
+                                                    selected = c("HRSC 1","HRSC 2"))),
                           
                           column(width = 4, "Lower Henry's Reach",
                                  
                               fluidRow(column(6,
                                            checkboxGroupInput('Complex_2_1', label = NULL, choices = c("HRSC 3","HRSC 4","HRSC 5"), 
-                                                              selected = c("HRSC 3","HRSC 4","HRSC 5"))),
+                                            selected =  c("HRSC 3","HRSC 4","HRSC 5"))),
                                         column(6,
                                            checkboxGroupInput('Complex_2_2',label = NULL, choices = c("HRSC 6","HRSC 7","HRSC 8"), 
-                                                               selected = c("HRSC 6","HRSC 7","HRSC 8") )))),
+                                              selected = c("HRSC 6","HRSC 7","HRSC 8"))))),
                           
                           
                                                                
@@ -100,7 +100,14 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                      inline = TRUE),     
         leafletOutput('shp_map', height = "80vh")     
       ),
-      column(4)
+      column(4, 
+             dateRangeInput('daterange_fish_move','Select Date Range',
+                            start = "2022-01-01",
+                            end   = "2022-05-18",
+                            min   = as.Date(min(pittag_data_raw$min_det)),
+                            max   = as.Date(max(pittag_data_raw$min_det))), 
+             uiOutput("dateslider_fish_move")
+             )
     )    
    ), #tabPanel "fish movement"
   ), #tabsetPanel (main)
@@ -108,7 +115,6 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
 
 server <- function(input,output,session){
   
-
 #Detection Data ----    
   output$bar_graph <- renderPlot({
     
@@ -119,7 +125,23 @@ server <- function(input,output,session){
     }else{
       x_axis_args <- scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
     }
-    
+  
+    if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 8) {
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442", "#0072B2", "#D55E00")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 7) { 
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442", "#0072B2")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 6) { 
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 5) { 
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 4) { 
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF") 
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 3) { 
+      color_choices <- c("#3300CC", "#E69F00", "#FF0000") 
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 2) { 
+      color_choices <- c("#3300CC", "#E69F00") 
+    } else { color_choices <- c("00FFFF") }
+      
     ggplot(channel_complex %>%
            filter(channel_complex$SC %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) %>% 
            filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
@@ -135,8 +157,7 @@ server <- function(input,output,session){
             axis.title = element_text(size = 16, face = "bold"),
             plot.caption = element_text(hjust = 0, size = 14),
             title = element_text(size = 16, face = "bold")) + 
-      scale_fill_manual(values = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
-                                   "#56B4E9", "#F0E442", "#0072B2", "#D55E00"))
+      scale_fill_manual(values = color_choices)
   })
 
 # Leaflet Map---- 
@@ -149,6 +170,22 @@ server <- function(input,output,session){
     }else{
       x_axis_args_leaf <- scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
     }
+
+    if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 8) {
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442", "#0072B2", "#D55E00")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 7) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442", "#0072B2")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 6) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9", "#F0E442")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 5) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF","#56B4E9")
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 4) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000", "#00FFFF") 
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 3) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00", "#FF0000") 
+    } else if (length(c(input$Complex_1,input$Complex_2_1,input$Complex_2_2 )) == 2) { 
+      color_choices_leaf <- c("#3300CC", "#E69F00") 
+    } else { color_choices_leaf <- c("00FFFF") }
     
     leaflet_popup_graphs <- channel_complex %>%
       filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
@@ -175,7 +212,18 @@ server <- function(input,output,session){
       slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
                     "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC))
     
-    
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
+    if ( length(leaflet_popup_graphs$SC) < 8 ){
+      leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1,] <- c(SC = NA ,data = NA ,ggs = NA )}
     
    leaflet_plot_data <- litz_locs %>% mutate(Side_Channel =
                            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
@@ -187,46 +235,109 @@ server <- function(input,output,session){
       mutate(plots_id = leaflet_popup_graphs$SC ) %>%
       mutate(plots = leaflet_popup_graphs$ggs )
 
-   
+
   leaf_plot <- leaflet(leaflet_plot_data) %>%
       addProviderTiles('Esri.WorldImagery',
        options = providerTileOptions(maxNativeZoom=19,maxZoom=100)) %>%
-      setView(lng = -113.627, lat = 44.8982, zoom = 17)%>%
-      addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
-                 lng = ~Longitude, lat = ~Latitude,
-                 radius = 2,
-                 color = c("#3300CC", "#E69F00", "#FF0000", "#00FFFF",
-                           "#56B4E9", "#F0E442", "#0072B2", "#D55E00"),
-                 opacity = 1,
-                 fillOpacity = 1,
-                 label = ~Side_Channel,
-                 labelOptions = labelOptions(noHide = TRUE,
-                                             direction = "bottom",
-                                             textsize = "12px",
-                                             style = list("color" = "black" )),
-                 popup =  popupGraph(filter(leaflet_plot_data,Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2))$plots, 
-                                     width = 550, 
-                                     height = 250))
+       setView(lng = -113.627, lat = 44.8982, zoom = 17)
+ 
 
   
-   if (input$ortho_choice == "Fall") {
-     addRasterRGB(leaf_plot, ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3)
+   if (input$ortho_choice == "Fall" && any(is.na(leaflet_plot_data) == TRUE)) {
+     
+     leaf_plot %>%
+     addRasterRGB(ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+       addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
+                  lng = ~Longitude, lat = ~Latitude,
+                  radius = 2,
+                  color = color_choices_leaf,
+                  opacity = 1,
+                  fillOpacity = 1,
+                  label = ~Side_Channel,
+                  labelOptions = labelOptions(noHide = TRUE,
+                                              direction = "bottom",
+                                              textsize = "12px",
+                                              style = list("color" = "black" )))
+     
+   } else if (input$ortho_choice == "Fall" && any(is.na(leaflet_plot_data) == FALSE)) {
+     
+     leaf_plot %>% 
+     addRasterRGB(ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+       addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
+                  lng = ~Longitude, lat = ~Latitude,
+                  radius = 2,
+                  color = color_choices_leaf,
+                  opacity = 1,
+                  fillOpacity = 1,
+                  label = ~Side_Channel,
+                  labelOptions = labelOptions(noHide = TRUE,
+                                              direction = "bottom",
+                                              textsize = "12px",
+                                              style = list("color" = "black" )),
+                  popup =  popupGraph(filter(leaflet_plot_data,Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2))$plots, 
+                                      width = 550, 
+                                      height = 250)) 
+     
+   } else if (input$ortho_choice == "Spring" && any(is.na(leaflet_plot_data) == TRUE)) {
+       
+     leaf_plot %>%
+       addRasterRGB( ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+       addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
+                  lng = ~Longitude, lat = ~Latitude,
+                  radius = 2,
+                  color = color_choices_leaf,
+                  opacity = 1,
+                  fillOpacity = 1,
+                  label = ~Side_Channel,
+                  labelOptions = labelOptions(noHide = TRUE,
+                                              direction = "bottom",
+                                              textsize = "12px",
+                                              style = list("color" = "black" )))
+     
    } else {
-     addRasterRGB(leaf_plot, ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) }
+       
+     leaf_plot %>% 
+       addRasterRGB(ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
+       addCircles(data = leaflet_plot_data %>% filter(Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2)),
+                  lng = ~Longitude, lat = ~Latitude,
+                  radius = 2,
+                  color = color_choices_leaf,
+                  opacity = 1,
+                  fillOpacity = 1,
+                  label = ~Side_Channel,
+                  labelOptions = labelOptions(noHide = TRUE,
+                                              direction = "bottom",
+                                              textsize = "12px",
+                                              style = list("color" = "black" )),
+                  popup =  popupGraph(filter(leaflet_plot_data,Side_Channel %in% c(input$Complex_1,input$Complex_2_1,input$Complex_2_2))$plots, 
+                                      width = 550, 
+                                      height = 250)) 
+     
+     }
   
   })
-
+  
   # Fish Movement ----
   output$shp_map <- renderLeaflet({
+    
+    
+    leaflet_plot_data_shp <- litz_locs %>% 
+      mutate(Side_Channel =
+            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
+          "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
+           "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   ,
+           "NA"   ,"HRSC 7", "HRSC 8")) %>%
+      filter(Side_Channel != "NA") %>%
+      mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))
   
      shp_leaf <- leaflet() %>%
       addProviderTiles('Esri.WorldImagery',
           options = providerTileOptions(maxNativeZoom=19,maxZoom=100)) %>%
       setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%       
-       addCircles(data = leaflet_plot_data,
+       addCircles(data = leaflet_plot_data_shp,
                   lng = ~Longitude, lat = ~Latitude,
                   radius = 2,
-                  color =~Color,
+                  color = "coral",
                   opacity = 1,
                   fillOpacity = 1,
                   label = ~Side_Channel,
@@ -246,6 +357,15 @@ server <- function(input,output,session){
      
   })
  
+  output$dateslider_fish_move <- renderUI(
     
-}
+    sliderInput("Dateslider",
+                "Date:",
+                min = input$daterange_fish_move[1], 
+                max = input$daterange_fish_move[2], 
+                value=as.Date ("2022-01-01"),timeFormat="%Y-%m-%d")
+    )
+  
+} #Closing Bracket for Server
+  
 shinyApp(ui=ui,server=server)

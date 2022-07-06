@@ -124,8 +124,8 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 
 # Leaflet Plot ----
  
- leaflet_popup_graphs <- channel_complex %>%
-   filter(between(as.Date(channel_complex$min_det),as.Date("2022-01-11"),as.Date("2022-05-18"))) %>%
+ leaflet_popup_graphs  <- channel_complex %>%
+   filter(between(as.Date(channel_complex$min_det),as.Date("2022-05-17"),as.Date("2022-05-18"))) %>%
    group_by(SC) %>%
    nest() %>% 
    filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
@@ -151,7 +151,14 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
    slice(match(c("HRSC 1","HRSC 2","HRSC 3","HRSC 4",
                  "HRSC 5","HRSC 6","HRSC 7","HRSC 8"),SC)) 
    
+ if ( length(leaflet_popup_graphs$SC) < 8) {
+   leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1, ] <- c(SC = NA ,data = NA ,ggs = NA )}
  
+ if ( length(leaflet_popup_graphs$SC) < 8) {
+   leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1, ] <- c(SC = NA ,data = NA ,ggs = NA )}
+ 
+ if ( length(leaflet_popup_graphs$SC) < 8) {
+   leaflet_popup_graphs[nrow(leaflet_popup_graphs) + 1, ] <- c(SC = NA ,data = NA ,ggs = NA )}
 
  
     
@@ -169,11 +176,15 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
 
 
    
-  leaflet(leaflet_plot_data) %>%
+  leaf_plot <- leaflet(leaflet_plot_data) %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho_spring , na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
-   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>% 
-   addCircles(data = leaflet_plot_data,
+   setView(lng = -113.627, lat = 44.8995, zoom = 17)
+
+
+if (any(is.na(leaflet_plot_data) == TRUE)) {
+  leaf_plot %>%
+  addCircles(data = leaflet_plot_data,
              lng = ~Longitude, lat = ~Latitude,
              radius = 2,
              color =~Color,
@@ -183,13 +194,25 @@ for(j in unique(filter(channel_complex, Complex == "Lower HRSC")$tag_code)) {
              labelOptions = labelOptions(noHide = TRUE,
                                          direction = "bottom",
                                          textsize = "12px",
-                                         style = list("color" = "black" )),
-              
-             popup = popupGraph(leaflet_plot_data$plots,
-                         width = 550,
-                         height = 250))
-
-
+                                         style = list("color" = "black" )))
+} else {
+  leaf_plot %>%
+    addCircles(data = leaflet_plot_data,
+               lng = ~Longitude, lat = ~Latitude,
+               radius = 2,
+               color =~Color,
+               opacity = 1,
+               fillOpacity = 1,
+               label = ~Side_Channel,
+               labelOptions = labelOptions(noHide = TRUE,
+                                           direction = "bottom",
+                                           textsize = "12px",
+                                           style = list("color" = "black" )),
+               
+               popup = popupGraph(leaflet_plot_data$plots,
+                                  width = 550,
+                                  height = 250))
+}
 
 
  
