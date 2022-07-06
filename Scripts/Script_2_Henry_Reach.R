@@ -18,6 +18,7 @@ library(padr)
 library(here)
 library(leafpop)
 library(glue)
+library(leaflegend)
 
 setwd(here())
 #Litz Cord Locations 
@@ -221,17 +222,15 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
  leaflet() %>%
    addProviderTiles('Esri.WorldImagery') %>%
    addRasterRGB(ortho, na.color = "transparent",r = 1,g = 2, b = 3, domain = 3) %>%
-   addPolygons(data = LW_shp_lemhi) %>%
-   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>% 
-   addCircles(data = leaflet_plot_data,
+   addPolygons(data = LW_shp_lemhi %>% mutate(color = c("red", "blue", rep("red",4), "blue")),
+               color = ~color ) %>%
+   setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%
+   addCircles(data = litz_locs,
               lng = ~Longitude, lat = ~Latitude,
               radius = 2,
-              color =~Color,
+              color ="red",
               opacity = 1,
-              fillOpacity = 1,
-              label = ~Side_Channel,
-              labelOptions = labelOptions(textsize = "12px",
-                                          style = list("color" = "black" )))
+              fillOpacity = 1)
               
  
 #Daily Detection Plots ----

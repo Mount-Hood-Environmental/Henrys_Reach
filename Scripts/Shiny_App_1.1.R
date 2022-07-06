@@ -17,6 +17,7 @@ library(here)
 library(glue)
 library(leafpop)
 
+
 setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
@@ -320,40 +321,33 @@ server <- function(input,output,session){
   # Fish Movement ----
   output$shp_map <- renderLeaflet({
     
-    
-    leaflet_plot_data_shp <- litz_locs %>% 
-      mutate(Side_Channel =
-            c("NA",  "NA"  , "NA", "HRSC 1",  "NA"   ,
-          "HRSC 2",  "NA"  , "HRSC 3",  "NA"   , "HRSC 4",
-           "NA"   ,"HRSC 5",  "NA"   , "HRSC 6",  "NA"   ,
-           "NA"   ,"HRSC 7", "HRSC 8")) %>%
-      filter(Side_Channel != "NA") %>%
-      mutate(complex = c(rep("Upper HRSC",2),rep("Lower HRSC",6)))
-  
      shp_leaf <- leaflet() %>%
       addProviderTiles('Esri.WorldImagery',
           options = providerTileOptions(maxNativeZoom=19,maxZoom=100)) %>%
-      setView(lng = -113.627, lat = 44.8995, zoom = 17) %>%       
-       addCircles(data = leaflet_plot_data_shp,
-                  lng = ~Longitude, lat = ~Latitude,
-                  radius = 2,
-                  color = "coral",
-                  opacity = 1,
-                  fillOpacity = 1,
-                  label = ~Side_Channel,
-                  labelOptions = labelOptions(textsize = "12px",
-                  style = list("color" = "black" )))
+      setView(lng = -113.627, lat = 44.8995, zoom = 16)       
 
-    
      if (input$season_choice == "Fall") {
-       shp_leaf %>%
+       shp_leaf <- shp_leaf %>%
        addRasterRGB(ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-       addPolygons(data = LW_shp_lemhi) 
+       addPolygons(data = LW_shp_lemhi %>% mutate(color = c("red", "blue", rep("red",4), "blue")),
+                   color = ~color ) 
+
      } else {
-       shp_leaf %>%
+      shp_leaf <- shp_leaf %>%
          addRasterRGB(ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
-         addPolygons(data = HW_shp_lemhi)
-       }
+         addPolygons(data = HW_shp_lemhi %>% mutate(color = c("red", "blue", "blue",rep("red",4))),
+                     color = ~color )
+     }
+     
+    shp_leaf %>% 
+    addCircles(data = litz_locs,
+               lng = ~Longitude, lat = ~Latitude,
+               radius = 2,
+               color = "red",
+               opacity = 1,
+               fillOpacity = 1) 
+    
+
      
   })
  
