@@ -22,7 +22,7 @@ setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
 
-res_of_ortho <- 10
+res_of_ortho <- 3
 
 ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
          raster::brick()), fact = res_of_ortho)
@@ -357,7 +357,8 @@ server <- function(input,output,session){
                 "Date:",
                 min = input$daterange_fish_move[1], 
                 max = input$daterange_fish_move[2], 
-                value=as.Date ("2022-01-01"),timeFormat="%Y-%m-%d")
+                value=as.Date ("2022-01-01"),timeFormat="%Y-%m-%d", 
+                animate = TRUE)
     )
   
 } #Closing Bracket for Server
