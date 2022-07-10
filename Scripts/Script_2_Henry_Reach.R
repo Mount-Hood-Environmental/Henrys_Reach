@@ -309,8 +309,8 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
  ggplot(Lemhi_discharge, aes(x = day, y=cfs)) +
    geom_line()
  
-
-
+ lem1_release_poly <- c("Main Channel")
+ as.data.frame(lem1_release_poly)
   
   
   

@@ -1,7 +1,7 @@
 # Authors: Bridger Bertram
 # Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
 # Created: May 15
-# Last Modified: June 24
+# Last Modified: July 9th
 
 # Load Packages and Data ------
 library(tidyverse)
@@ -17,7 +17,8 @@ library(scales)
 library(here)
 library(glue)
 library(leafpop)
-
+library(plotly) 
+library(shinycssloaders) 
 
 setwd(here())
 litz_locs <- read_csv("Data/Litz_Locations.csv")
@@ -56,8 +57,8 @@ channel_complex <- pittag_data_raw %>%
 ui <- fluidPage(theme = shinytheme("spacelab"),
   titlePanel( 
     fluidRow(column(width = 8, "Henry's Reach"), 
-             column(width = 2, tags$img(src = "MHE_logo.jpg", height = 80, width = 190, align = "right")),
-             column(width = 2, tags$img(src = "Biomark_logo.png", height = 80, width = 180)))
+             column(width = 2, tags$a(tags$img(src = "MHE_logo.jpg", height = 80, width = 190, align = "right"),  href="https://mthoodenvironmental.com/")),
+             column(width = 2, tags$a(tags$img(src = "Biomark_logo.png", height = 80, width = 180), href = "https://www.biomark.com/")))
             ), #Title Panel
    
        tabsetPanel(
@@ -92,14 +93,18 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                                                                      selectedTextFormat = 'static', 
                                                                      noneSelectedText = "Lower Henry's Reach"))),
                                 ),  #fluidRow (select inputs)
-                        plotOutput('bar_graph', height = "70vh")),
+                        plotOutput('bar_graph', height = "70vh") %>% 
+                         withSpinner(color="#0dc5c1")
+                   
+                   ),
 
             column(width  = 5, 
                    offset = 0, 
                    radioButtons('ortho_choice', 'Orthomosaic', 
                      choices = c('Fall', 'Spring'),
                      inline = TRUE), 
-                   leafletOutput('SC_map', height = "70vh"))
+                   leafletOutput('SC_map', height = "70vh") %>%
+                   withSpinner(color="#0dc5c1"))
                    ), #fluidRow
                   ), #tabPannel "Site Detection"
  
@@ -110,7 +115,8 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
         radioButtons('season_choice', label = NULL, 
                      choices = c('Fall', 'Spring'), 
                      inline = TRUE),     
-        leafletOutput('shp_map', height = "80vh")     
+        leafletOutput('shp_map', height = "80vh") %>%
+          withSpinner(color="#0dc5c1"),    
       ), #end column
       column(4, 
              dateRangeInput('daterange_fish_move','Select Date Range',
@@ -118,15 +124,14 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                             end   = "2022-05-18",
                             min   = as.Date(min(pittag_data_raw$min_det)),
                             max   = as.Date(max(pittag_data_raw$min_det))), 
-             uiOutput("dateslider_fish_move"), 
-             dataTableOutput("ploy_table")
+             uiOutput("dateslider_fish_move"),
+             dataTableOutput("poly_tables")
              ) #end column 
     ) #Fluid row within fish movement    
    ), #tabPanel "fish movement"
  
  tabPanel(title = "Lemhi River Discharge", 
           ) #tabPanel "Lemhi River Discharge" 
- 
   ), #tabsetPanel (main)
  ) #fluidPage
 
@@ -142,7 +147,7 @@ server <- function(input,output,session){
                 value=as.Date ("2022-01-01"),timeFormat="%Y-%m-%d", 
                 animate = TRUE)
   )
-
+  
 #Detection Data ----    
   output$bar_graph <- renderPlot({
     
@@ -361,13 +366,15 @@ server <- function(input,output,session){
        shp_leaf <- shp_leaf %>%
        addRasterRGB(ortho_fall , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
        addPolygons(data = LW_shp_lemhi %>% mutate(color = c("red", "blue", rep("red",4), "blue")),
-                   color = ~color ) 
+                   color = ~color,
+                   layerId = ~Reach) 
 
      } else {
       shp_leaf <- shp_leaf %>%
          addRasterRGB(ortho_spring , na.color = "transparent", r = 1,  g = 2,  b = 3, domain = 3) %>%
          addPolygons(data = HW_shp_lemhi %>% mutate(color = c("red", "blue", "blue",rep("red",4))),
-                     color = ~color )
+                     color = ~color,
+                     layerId = ~Reach)
      }
      
     shp_leaf %>% 
@@ -378,16 +385,53 @@ server <- function(input,output,session){
                opacity = 1,
                fillOpacity = 1) 
      
-  }) #Closing Brackets for "Fish Movement" 
+  }) #Closing Brackets for output$shp_map
   
-  #Polygons Table -----
   
-  output$poly_table <- renderDataTable({
-    
-    LW_shp_lemhi
-    
-  })
-  
+#Click input table -----  
+  observeEvent(input$shp_map_shape_click, { 
+   
+    output$poly_tables <- renderDataTable({
+     
+      p <- input$shp_map_shape_click 
+
+      if(p$id == "Lem1_Release"){ 
+        table_leaf <- c("Main Channel", "Lem 1 realease", "red")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf
+        
+      }else if (p$id == "Upper_HRSC"){
+        table_leaf <- c("Side Channel", "Upper HRSC", "blue")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf  
+        
+      }else if (p$id == "Lower_HRSC"){
+        table_leaf <- c("Side Channel", "Lower HRSC", "blue")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf  
+        
+      }else if (p$id == "Lem3"){
+        table_leaf <- c("Main Channel", "Lemhi 3", "red")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf  
+        
+      }else if (p$id == "Lem4"){
+        table_leaf <- c("Main Channel", "Lemhi 4", "red")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf  
+        
+      }else if (p$id == "Lem5"){
+        table_leaf <- c("Main Channel", "Lemhi 5", "red")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf 
+        
+      }else{
+        table_leaf <- c("Main Channel", "Lemhi 2", "red")
+        table_leaf <- as.data.frame(table_leaf)
+        table_leaf } 
+      
+    }) #Closing brackets for output$poly_tables  
+  }) #closing brackets for observeEvent 
 } #Closing Bracket for Server
   
 shinyApp(ui=ui,server=server)
