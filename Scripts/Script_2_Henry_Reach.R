@@ -19,6 +19,7 @@ library(here)
 library(leafpop)
 library(glue)
 library(leaflegend)
+library(matrixStats)
 
 setwd(here())
 #Litz Cord Locations 
@@ -47,7 +48,8 @@ Lemhi_discharge <- Lemhi_discharge_raw %>%
                    mutate(day = as.Date(dateTime, format = "%d"))%>%
                    aggregate(cfs~day,mean)  
 
-  
+USGS_Stream_Data <- read_csv("Data/LemL5_Flow_WY.csv") 
+
 channel_complex <- pittag_data_raw %>% 
   mutate(SC = ifelse(node %in% 1:2,   "SRSC 1",
               ifelse(node ==     3,   "SRSC 2",
@@ -287,30 +289,26 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
    scale_x_date(date_breaks = "1 week" , labels = date_format("%m/%d"),
                 limits = c(as.Date("2022-01-01"),as.Date("2022-05-18")))
 
-# Lemhi CFS and Daily Dets ---- 
+# Lemhi CFS ---- 
 
-   daily_dets <- as.data.frame(table(
-     channel_complex %>%
-       filter(!SC %in% c("SRSC 1", "SRSC 2")) %>%
-       #mutate(day = as.Date(min_det, format = "%d")) %>%
-       dplyr::select(min_det) %>%
-       filter(between(min_det, as.Date("2022-03-01"),as.Date("2022-05-18")))))
+ USGS_Stream_Data_filtered <- USGS_Stream_Data%>% 
+   mutate(date = USGS_Stream_Data$...1) %>%
+   filter(!date %in% c("Min","Q1","Mean","Q3","Max")) %>%
+   mutate(real_date = as.Date(date,format = "%b-%d")) %>%
+   select(real_date,Min,Q1,Mean,Q3,Max,`2022`) %>%
+   gather(key = "stat", value = "cfs", -real_date)
  
+ USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
+    levels = c('2022',"Max", "Q3", "Mean", "Q1", "Min"))
+ 
+ggplot(USGS_Stream_Data_filtered, 
+ aes(x=real_date, y = cfs)) +
+ geom_line(aes(color = stat)) + 
+ scale_color_manual(values = c('purple',"coral","cyan","black","cyan","coral"))+   
+ scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
  
 
- daily_dets_complete <- daily_dets %>% pad %>%
-   fill_by_value(Freq) %>%
-   add_row(min_det = c(seq.Date("2022-03-01","2022-03-07","day")),
-           freq = c(0,0,0,0,0,0,0,0))
  
- ggplot(daily_dets_complete, aes( x=day , y=Freq ))+
-  geom_line() 
-
- ggplot(Lemhi_discharge, aes(x = day, y=cfs)) +
-   geom_line()
- 
- lem1_release_poly <- c("Main Channel")
- as.data.frame(lem1_release_poly)
   
   
   

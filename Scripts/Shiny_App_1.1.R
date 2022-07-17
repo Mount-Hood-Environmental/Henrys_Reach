@@ -21,8 +21,9 @@ library(plotly)
 library(shinycssloaders) 
 
 setwd(here())
-litz_locs <- read_csv("Data/Litz_Locations.csv")
-pittag_data_raw <- read_csv("Data/0LL_cleaned_nov_may")
+litz_locs        <- read_csv("Data/Litz_Locations.csv")
+pittag_data_raw  <- read_csv("Data/0LL_cleaned_nov_may")
+USGS_Stream_Data <- read_csv("Data/LemL5_Flow_WY.csv") 
 
 res_of_ortho <- 10
 
@@ -131,6 +132,8 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
    ), #tabPanel "fish movement"
  
  tabPanel(title = "Lemhi River Discharge", 
+    plotOutput("Lemhi_Discharge_Plot", height = "80vh") %>%
+      withSpinner(color="#0dc5c1")
           ) #tabPanel "Lemhi River Discharge" 
   ), #tabsetPanel (main)
  ) #fluidPage
@@ -432,6 +435,39 @@ server <- function(input,output,session){
       
     }) #Closing brackets for output$poly_tables  
   }) #closing brackets for observeEvent 
+  
+#Lemhi River Discharge Plot ----
+  output$Lemhi_Discharge_Plot <- renderPlot({
+    
+    USGS_Stream_Data_filtered <- USGS_Stream_Data%>% 
+      mutate(date = USGS_Stream_Data$...1) %>%
+      filter(!date %in% c("Min","Q1","Mean","Q3","Max")) %>%
+      mutate(real_date = as.Date(date,format = "%b-%d")) %>%
+      select(real_date,Min,Q1,Mean,Q3,Max,`2022`) %>%
+      gather(key = "stat", value = "cfs", -real_date)
+  
+    USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
+                                              levels = c('2022',"Max", "Q3", "Mean", "Q1", "Min"))
+    
+    ggplot(USGS_Stream_Data_filtered, 
+           aes(x=real_date, y = cfs)) +
+      geom_line(aes(color = stat)) +
+      scale_color_manual(values = c("purple","coral","cyan","black","cyan","coral"))+ 
+      scale_x_date(date_breaks = "1 month" , labels = date_format("%b")) + 
+      labs(title = "Lemhi River (L5) 1979 - 2022",x="Date", y = "Discharge (CFS)",
+           caption = "Caption Text") +
+      theme_minimal() +
+      theme(axis.text = element_text(size=14),
+            legend.text = element_text(size = 14),
+            legend.key.size = unit(1.75, 'cm'),
+            legend.title = element_blank(),
+            axis.title = element_text(size = 16, face = "bold"),
+            plot.caption = element_text(hjust = 0, size = 14),
+            title = element_text(size = 16, face = "bold"))
+    
+  })  
+  
+  
 } #Closing Bracket for Server
   
 shinyApp(ui=ui,server=server)
