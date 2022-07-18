@@ -293,21 +293,42 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
 
  USGS_Stream_Data_filtered <- USGS_Stream_Data%>% 
    mutate(date = USGS_Stream_Data$...1) %>%
-   filter(!date %in% c("Min","Q1","Mean","Q3","Max")) %>%
+   filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
    mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-   select(real_date,Min,Q1,Mean,Q3,Max,`2022`) %>%
+   dplyr::select(real_date,Min,Q1,Median,Q3,Max,"2022") %>%
    gather(key = "stat", value = "cfs", -real_date)
  
  USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
-    levels = c('2022',"Max", "Q3", "Mean", "Q1", "Min"))
- 
-ggplot(USGS_Stream_Data_filtered, 
- aes(x=real_date, y = cfs)) +
- geom_line(aes(color = stat)) + 
- scale_color_manual(values = c('purple',"coral","cyan","black","cyan","coral"))+   
- scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d"))
+    levels = c('2022',"Max", "Q3", "Median", "Q1", "Min"))
  
 
+ ggplot() +
+   geom_line(data = USGS_Stream_Data_filtered, aes(x = real_date, y = cfs, color = stat)) +
+   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs),
+                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs)), 
+               fill = "cyan", alpha = .3) + 
+   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs),
+                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Max") %>% pull(cfs)), 
+               fill = "coral", alpha = .3) +
+   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Min") %>% pull(cfs),
+                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs)), 
+               fill = "coral", alpha = .3) +
+   scale_color_manual(values = c('purple',"coral","cyan","black","cyan","coral"), 
+                      labels = c("2022", "Max", "75th Quartile", "Median ('79-'22)", "25th Quartile", "Min"))+
+   scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
+   labs(x = "Date", y = "Discharge (cfs)", title = "Lemhi River - L5 (USGS #13305310)") +
+   theme_minimal() +
+   theme(axis.text = element_text(size=16),
+         legend.text = element_text(size = 16),
+         legend.key.size = unit(1.75, 'cm'),
+         legend.title = element_blank(),
+         axis.title = element_text(size = 16, face = "bold"),
+         plot.caption = element_text(hjust = 0, size = 14),
+         title = element_text(size = 16, face = "bold"),
+         plot.title = element_text(hjust = 0.5))
  
   
   

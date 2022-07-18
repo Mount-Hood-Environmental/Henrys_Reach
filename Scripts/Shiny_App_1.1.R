@@ -19,6 +19,8 @@ library(glue)
 library(leafpop)
 library(plotly) 
 library(shinycssloaders) 
+library(gganimate)
+library(ggnewscale)
 
 setwd(here())
 litz_locs        <- read_csv("Data/Litz_Locations.csv")
@@ -132,9 +134,14 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
    ), #tabPanel "fish movement"
  
  tabPanel(title = "Lemhi River Discharge", 
+    pickerInput("year", label = NULL, choices = c(as.character(seq(2022,1979,-1))), multiple = TRUE, 
+                options = pickerOptions(actionsBox = TRUE, 
+                                        selectedTextFormat = 'static', 
+                                        noneSelectedText = "Select Years")),
     plotOutput("Lemhi_Discharge_Plot", height = "80vh") %>%
       withSpinner(color="#0dc5c1")
-          ) #tabPanel "Lemhi River Discharge" 
+          ), #tabPanel "Lemhi River Discharge" 
+
   ), #tabsetPanel (main)
  ) #fluidPage
 
@@ -441,31 +448,59 @@ server <- function(input,output,session){
     
     USGS_Stream_Data_filtered <- USGS_Stream_Data%>% 
       mutate(date = USGS_Stream_Data$...1) %>%
-      filter(!date %in% c("Min","Q1","Mean","Q3","Max")) %>%
+      
+      filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
       mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-      select(real_date,Min,Q1,Mean,Q3,Max,`2022`) %>%
+      dplyr::select(real_date,Min,Q1,Median,Q3,Max) %>%
       gather(key = "stat", value = "cfs", -real_date)
-  
-    USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
-                                              levels = c('2022',"Max", "Q3", "Mean", "Q1", "Min"))
     
-    ggplot(USGS_Stream_Data_filtered, 
-           aes(x=real_date, y = cfs)) +
-      geom_line(aes(color = stat)) +
-      scale_color_manual(values = c("purple","coral","cyan","black","cyan","coral"))+ 
-      scale_x_date(date_breaks = "1 month" , labels = date_format("%b")) + 
-      labs(title = "Lemhi River (L5) 1979 - 2022",x="Date", y = "Discharge (CFS)",
-           caption = "Caption Text") +
+    USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
+                                      levels = c("Max", "Q3", "Median", "Q1", "Min"))
+    
+    
+      discharge_plot <- ggplot() +
+      geom_line(data = USGS_Stream_Data_filtered, aes(x = real_date, y = cfs, color = stat)) +
+      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs),
+                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs)), 
+                       fill = "cyan", alpha = .3) + 
+      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs),
+                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Max") %>% pull(cfs)), 
+                       fill = "coral", alpha = .3) +
+      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Min") %>% pull(cfs),
+                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs)), 
+                       fill = "coral", alpha = .3) +
+     scale_color_manual(values = c("coral","cyan","black","cyan","coral"), 
+                        labels = c("Max", "75th Quartile", "Median ('79-'22)", "25th Quartile", "Min"))+
+      scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
+      labs(x = "Date", y = "Discharge (cfs)", title = "Lemhi River - L5 (USGS #13305310)") +
       theme_minimal() +
-      theme(axis.text = element_text(size=14),
-            legend.text = element_text(size = 14),
+      theme(axis.text = element_text(size=16),
+            legend.text = element_text(size = 16),
             legend.key.size = unit(1.75, 'cm'),
             legend.title = element_blank(),
             axis.title = element_text(size = 16, face = "bold"),
             plot.caption = element_text(hjust = 0, size = 14),
-            title = element_text(size = 16, face = "bold"))
+            title = element_text(size = 16, face = "bold"),
+            plot.title = element_text(hjust = 0.5)) 
+        
+      USGS_Stream_Data_filtered_2 <- USGS_Stream_Data%>% 
+        mutate(date_2 = USGS_Stream_Data$...1) %>%
+        filter(!date_2 %in% c("Min","Q1","Median","Q3","Max")) %>%
+        mutate(real_date_2 = as.Date(date_2,format = "%b-%d")) %>%
+        dplyr::select(input$year,real_date_2) %>%
+        gather(key = "stat_2", value = "cfs_2", -real_date_2)
     
-  })  
+    if( is.null(input$year) == FALSE ){ 
+    discharge_plot + 
+      new_scale_color()+
+      geom_line(data = USGS_Stream_Data_filtered_2,
+                               aes(x=real_date_2, y=cfs_2, color=stat_2), size = 1.5) 
+    } else {discharge_plot}
+  })
+
   
   
 } #Closing Bracket for Server

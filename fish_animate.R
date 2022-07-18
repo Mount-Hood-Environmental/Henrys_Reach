@@ -1,5 +1,3 @@
-
-
 library(tidyverse)
 library(sf)
 library(mapview)
@@ -28,7 +26,7 @@ litz_locs <- read_csv("Data/Litz_Locations.csv")
 animate_fish <- pittag_data_raw %>% 
   filter(!node %in% c(1,2,3)) %>%
   mutate(date= as.Date(min_det)) %>%
-  filter(between(as.Date(min_det),as.Date("2022-02-01"),as.Date("2022-04-01"))) %>%
+  filter(between(as.Date(min_det),as.Date("2022-02-01"),as.Date("2022-03-01"))) %>%
   mutate(SC = ifelse(node %in% 4:5,   "HRSC 1",
               ifelse(node %in% 6:7,   "HRSC 2",
               ifelse(node %in% 8:9,   "HRSC 3",
@@ -51,9 +49,10 @@ p <- ggplot() +
  geom_polygon( aes( x = LW_shp_lemhi[[4]][[5]][[1]][[1]][,1], y = LW_shp_lemhi[[4]][[5]][[1]][[1]][,2] ), color = "red" , fill = "red" , alpha = .5) +
  geom_polygon( aes( x = LW_shp_lemhi[[4]][[6]][[1]][[1]][,1], y = LW_shp_lemhi[[4]][[6]][[1]][[1]][,2] ), color = "red" , fill = "red" , alpha = .5) +
  geom_polygon( aes( x = LW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = LW_shp_lemhi[[4]][[7]][[1]][[1]][,2] ), color = "blue", fill = "blue", alpha = .5) +
- geom_point(data = animate_fish, aes(x=lng, y=lat, color = tag_code), size = 3) +
- transition_states(date, transition_length = 3, state_length = 1) +
- labs(x="Longitude", y="Latitude")
+ geom_point(data = animate_fish, aes(x=lng, y=lat, color = tag_code), size = 3, 
+            position = position_jitter(h=0.0001,w=0.0001)) +
+ transition_time(min_det,) +
+ labs(title = "Date : {frame_time}", x="Longitude", y="Latitude")
 
 
 animate(p, renderer = gifski_renderer())
@@ -82,8 +81,8 @@ g <- ggplot() +
   geom_polygon( aes( x = LW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = LW_shp_lemhi[[4]][[7]][[1]][[1]][,2] ), color = "blue", fill = "blue", alpha = .5) +
   geom_point(data = fish_move, aes(x=lng, y=lat, color = id_vec), size = 3,
              position = position_jitter(h=0.0001,w=0.0001)) +
-  transition_states(date) +
-  labs(x="Longitude", y="Latitude")
+  transition_time(date) +
+  labs(title = "Date : {frame_time}", x="Longitude", y="Latitude")
  
 animate(g, renderer = gifski_renderer())
 
