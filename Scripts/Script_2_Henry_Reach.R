@@ -20,6 +20,8 @@ library(leafpop)
 library(glue)
 library(leaflegend)
 library(matrixStats)
+library(plotly)
+library(zoo)
 
 setwd(here())
 #Litz Cord Locations 
@@ -295,29 +297,39 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
    mutate(date = USGS_Stream_Data$...1) %>%
    filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
    mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-   dplyr::select(real_date,Min,Q1,Median,Q3,Max,"2022") %>%
+   dplyr::select(real_date,Min,Q1,Median,Q3,Max) %>%
    gather(key = "stat", value = "cfs", -real_date)
  
+ USGS_Stream_Data_filtered_2 <- USGS_Stream_Data%>% 
+   mutate(date_2 = USGS_Stream_Data$...1) %>%
+   filter(!date_2 %in% c("Min","Q1","Median","Q3","Max")) %>%
+   mutate(real_date_2 = as.Date(date_2,format = "%b-%d")) %>%
+   dplyr::select('1996',real_date_2) %>%
+   gather(key = "stat_2", value = "cfs_2", -real_date_2) 
+ 
+ USGS_Stream_Data_filtered <- na.locf(USGS_Stream_Data_filtered)
+ USGS_Stream_Data_filtered_2 <- na.locf(USGS_Stream_Data_filtered_2)
+ 
  USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
-    levels = c('2022',"Max", "Q3", "Median", "Q1", "Min"))
+    levels = c("Max", "Q3", "Median", "Q1", "Min"))
  
 
- ggplot() +
+ gg_cfs <- ggplot() +
    geom_line(data = USGS_Stream_Data_filtered, aes(x = real_date, y = cfs, color = stat)) +
-   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs),
-                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs)), 
-               fill = "cyan", alpha = .3) + 
-   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs),
-                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Max") %>% pull(cfs)), 
-               fill = "coral", alpha = .3) +
-   geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                     ymin = USGS_Stream_Data_filtered%>%filter(stat=="Min") %>% pull(cfs),
-                     ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs)), 
-               fill = "coral", alpha = .3) +
-   scale_color_manual(values = c('purple',"coral","cyan","black","cyan","coral"), 
-                      labels = c("2022", "Max", "75th Quartile", "Median ('79-'22)", "25th Quartile", "Min"))+
+    geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                      ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs),
+                      ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs)), 
+                fill = "cyan", alpha = .3) + 
+    geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                      ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs),
+                      ymax = USGS_Stream_Data_filtered%>%filter(stat=="Max") %>% pull(cfs)), 
+                fill = "coral", alpha = .3) +
+    geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
+                      ymin = USGS_Stream_Data_filtered%>%filter(stat=="Min") %>% pull(cfs),
+                      ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs)), 
+                fill = "coral", alpha = .3) +
+   scale_color_manual(values = c("coral","cyan","black","cyan","coral"), 
+                      labels = c("Max", "75th Quartile", "Median ('79-'22)", "25th Quartile", "Min"))+
    scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
    labs(x = "Date", y = "Discharge (cfs)", title = "Lemhi River - L5 (USGS #13305310)") +
    theme_minimal() +
@@ -330,11 +342,54 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
          title = element_text(size = 16, face = "bold"),
          plot.title = element_text(hjust = 0.5))
  
+   gg_cfs <- gg_cfs + 
+   new_scale_color() +
+   geom_line(data = USGS_Stream_Data_filtered_2,
+             aes(x=real_date_2, y=cfs_2, color=stat_2), size = 1.5)
   
-  
-  
+ gg_cfs
+ 
+#Plot_ly cfs---- 
+input <- c('1996','2021') 
+
+ USGS_plotly_data <- USGS_Stream_Data%>% 
+   mutate(date = USGS_Stream_Data$...1) %>%
+   filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
+   mutate(real_date = as.Date(date,format = "%b-%d")) %>%
+   dplyr::select(real_date,Min,Q1,Median,Q3,Max,input) %>%
+   arrange(real_date)
+ 
+ USGS_plotly_data<- na.locf(USGS_plotly_data)
+ 
 
  
+ ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)
+ for(i in 1:length(input)){
+   ploty_cfs <- add_trace(ploty_cfs, y = pull(USGS_plotly_data,input[i]), type = 'scatter', mode = 'lines', name = input[i]) }
  
+ ploty_cfs %>%
+   add_ribbons(ymin = ~Min, ymax = ~Q1 , fillcolor = "coral", opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE) %>%
+   add_ribbons(ymin = ~Q1 , ymax = ~Q3 , fillcolor = "cyan" , opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE)  %>%
+   add_ribbons(ymin = ~Q3 , ymax = ~Max, fillcolor = "coral", opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE) %>%
+   add_trace(y = ~Min,    mode = 'lines', type = 'scatter', name = 'Min',
+             line = list(color = 'coral')) %>%
+   add_trace(y = ~Q1,     mode = 'lines', type = 'scatter', name = 'Q1',
+             line = list(color = 'cyan')) %>%
+   add_trace(y = ~Median, mode = 'lines', type = 'scatter', name = 'Median',
+             line = list(color = 'black')) %>%
+   add_trace(y = ~Q3,     mode = 'lines', type = 'scatter', name = 'Q3',
+             line = list(color = 'cyan')) %>%
+   add_trace(y = ~Max,    mode = 'lines', type = 'scatter', name = 'Max',
+             line = list(color = 'coral')) 
+
+  USGS_plotly_data_2 <- USGS_Stream_Data%>% 
+    mutate(date = USGS_Stream_Data$...1) %>%
+    filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
+    mutate(real_date = as.Date(date,format = "%b-%d")) %>%
+    dplyr::select(real_date_2,"1996") %>%
+    arrange(real_date)
  
  

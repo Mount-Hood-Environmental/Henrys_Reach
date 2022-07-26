@@ -138,7 +138,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                 options = pickerOptions(actionsBox = TRUE, 
                                         selectedTextFormat = 'static', 
                                         noneSelectedText = "Select Years")),
-    plotOutput("Lemhi_Discharge_Plot", height = "80vh") %>%
+    plotlyOutput("Lemhi_Discharge_Plot", height = "75vh") %>%
       withSpinner(color="#0dc5c1")
           ), #tabPanel "Lemhi River Discharge" 
 
@@ -444,65 +444,53 @@ server <- function(input,output,session){
   }) #closing brackets for observeEvent 
   
 #Lemhi River Discharge Plot ----
-  output$Lemhi_Discharge_Plot <- renderPlot({
+  output$Lemhi_Discharge_Plot <- renderPlotly({
     
-    USGS_Stream_Data_filtered <- USGS_Stream_Data%>% 
+    USGS_plotly_data <- USGS_Stream_Data%>% 
       mutate(date = USGS_Stream_Data$...1) %>%
-      
       filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
       mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-      dplyr::select(real_date,Min,Q1,Median,Q3,Max) %>%
-      gather(key = "stat", value = "cfs", -real_date)
+      dplyr::select(real_date,Min,Q1,Median,Q3,Max,input$year) %>%
+      arrange(real_date)
     
-    USGS_Stream_Data_filtered$stat <- factor( USGS_Stream_Data_filtered$stat, 
-                                      levels = c("Max", "Q3", "Median", "Q1", "Min"))
+    USGS_plotly_data_2 <- USGS_Stream_Data%>% 
+      mutate(date = USGS_Stream_Data$...1) %>%
+      filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
+      mutate(real_date_2 = as.Date(date,format = "%b-%d")) %>%
+      dplyr::select(real_date_2,input$year) %>%
+      arrange(real_date_2)
     
+    USGS_plotly_data<- na.locf(USGS_plotly_data)
     
-      discharge_plot <- ggplot() +
-      geom_line(data = USGS_Stream_Data_filtered, aes(x = real_date, y = cfs, color = stat)) +
-      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs),
-                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs)), 
-                       fill = "cyan", alpha = .3) + 
-      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Q3")  %>% pull(cfs),
-                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Max") %>% pull(cfs)), 
-                       fill = "coral", alpha = .3) +
-      geom_ribbon(aes(  x   = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(real_date),
-                       ymin = USGS_Stream_Data_filtered%>%filter(stat=="Min") %>% pull(cfs),
-                       ymax = USGS_Stream_Data_filtered%>%filter(stat=="Q1")  %>% pull(cfs)), 
-                       fill = "coral", alpha = .3) +
-     scale_color_manual(values = c("coral","cyan","black","cyan","coral"), 
-                        labels = c("Max", "75th Quartile", "Median ('79-'22)", "25th Quartile", "Min"))+
-      scale_x_date(date_breaks = "1 month" , labels = date_format("%b %d")) +
-      labs(x = "Date", y = "Discharge (cfs)", title = "Lemhi River - L5 (USGS #13305310)") +
-      theme_minimal() +
-      theme(axis.text = element_text(size=16),
-            legend.text = element_text(size = 16),
-            legend.key.size = unit(1.75, 'cm'),
-            legend.title = element_blank(),
-            axis.title = element_text(size = 16, face = "bold"),
-            plot.caption = element_text(hjust = 0, size = 14),
-            title = element_text(size = 16, face = "bold"),
-            plot.title = element_text(hjust = 0.5)) 
+    if (is.null(input$year) == FALSE) {
+      
+      ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)
+      for(i in 1:length(input$year)){
+        ploty_cfs <- add_trace(ploty_cfs, y = pull(USGS_plotly_data,input$year[i]), type = 'scatter', mode = 'lines', name = input$year[i]) 
         
-      USGS_Stream_Data_filtered_2 <- USGS_Stream_Data%>% 
-        mutate(date_2 = USGS_Stream_Data$...1) %>%
-        filter(!date_2 %in% c("Min","Q1","Median","Q3","Max")) %>%
-        mutate(real_date_2 = as.Date(date_2,format = "%b-%d")) %>%
-        dplyr::select(input$year,real_date_2) %>%
-        gather(key = "stat_2", value = "cfs_2", -real_date_2)
+      }}else{ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)}
+  
+      ploty_cfs %>%  
+      add_ribbons(ymin = ~Min, ymax = ~Q1 , fillcolor = "coral", opacity = .3, line = list(color = 'rgba(0, 0, 0, 0)'),
+                  showlegend = FALSE) %>%
+      add_ribbons(ymin = ~Q1 , ymax = ~Q3 , fillcolor = "cyan" , opacity = .3, line = list(color = 'rgba(0, 0, 0, 0)'),
+                  showlegend = FALSE)  %>%
+      add_ribbons(ymin = ~Q3 , ymax = ~Max, fillcolor = "coral", opacity = .3, line = list(color = 'rgba(0, 0, 0, 0)'),
+                  showlegend = FALSE) %>%
+      add_trace(y = ~Min,    mode = 'lines', type = 'scatter', name = 'Min',
+                line = list(color = 'coral')) %>%
+      add_trace(y = ~Q1,     mode = 'lines', type = 'scatter', name = 'Q1',
+                line = list(color = 'cyan')) %>%
+      add_trace(y = ~Median, mode = 'lines', type = 'scatter', name = 'Median',
+                line = list(color = 'black')) %>%
+      add_trace(y = ~Q3,     mode = 'lines', type = 'scatter', name = 'Q3',
+                line = list(color = 'cyan')) %>%
+      add_trace(y = ~Max,    mode = 'lines', type = 'scatter', name = 'Max',
+                line = list(color = 'coral')) 
+      
     
-    if( is.null(input$year) == FALSE ){ 
-    discharge_plot + 
-      new_scale_color()+
-      geom_line(data = USGS_Stream_Data_filtered_2,
-                               aes(x=real_date_2, y=cfs_2, color=stat_2), size = 1.5) 
-    } else {discharge_plot}
   })
 
-  
-  
 } #Closing Bracket for Server
   
 shinyApp(ui=ui,server=server)
