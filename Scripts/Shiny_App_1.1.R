@@ -27,14 +27,17 @@ litz_locs        <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw  <- read_csv("Data/0LL_cleaned_nov_may")
 USGS_Stream_Data <- read_csv("Data/LemL5_Flow_WY.csv") 
 
-res_of_ortho <- 10
+#Low Resolution Ortho
+#ortho_resolution <- 10
+#High Resolution Ortho 
+ortho_resolution <- 3
 
 ortho_fall <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced.tif') %>%
-         raster::brick()), fact = res_of_ortho)
+         raster::brick()), fact = ortho_resolution)
          ortho_fall[ortho_fall == 0] <- NA
          
 ortho_spring <- aggregate((terra::rast('Data/ortho_reduced/Henrys_reduced_spring_22.tif') %>%
-        raster::brick()), fact = res_of_ortho)
+        raster::brick()), fact = ortho_resolution)
         ortho_spring[ortho_spring == 0] <- NA
         
  HW_shp_lemhi <- st_transform(st_read("Data/shapefiles/Henry_HighW.gpkg"), '+proj=longlat +datum=WGS84') 
