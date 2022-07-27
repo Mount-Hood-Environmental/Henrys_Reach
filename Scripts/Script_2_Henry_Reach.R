@@ -22,6 +22,7 @@ library(leaflegend)
 library(matrixStats)
 library(plotly)
 library(zoo)
+library(randomcoloR)
 
 setwd(here())
 #Litz Cord Locations 
@@ -350,8 +351,7 @@ if (any(is.na(leaflet_plot_data) == TRUE)) {
  gg_cfs
  
 #Plot_ly cfs---- 
-input <- c('1996','2021') 
-
+input <- c('1996') 
  USGS_plotly_data <- USGS_Stream_Data%>% 
    mutate(date = USGS_Stream_Data$...1) %>%
    filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
@@ -361,35 +361,44 @@ input <- c('1996','2021')
  
  USGS_plotly_data<- na.locf(USGS_plotly_data)
  
-
+ line_pal <- randomColor(100, luminosity="bright")
  
  ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)
  for(i in 1:length(input)){
-   ploty_cfs <- add_trace(ploty_cfs, y = pull(USGS_plotly_data,input[i]), type = 'scatter', mode = 'lines', name = input[i]) }
+   
+   ploty_cfs <- add_trace(ploty_cfs, y = pull(USGS_plotly_data,input[i]),
+                type = 'scatter',
+                mode = 'lines',
+                name = input[i], 
+                line = list(color = line_pal[i],
+                width = 4),hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}'))}
  
  ploty_cfs %>%
-   add_ribbons(ymin = ~Min, ymax = ~Q1 , fillcolor = "coral", opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
-               showlegend = FALSE) %>%
-   add_ribbons(ymin = ~Q1 , ymax = ~Q3 , fillcolor = "cyan" , opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
-               showlegend = FALSE)  %>%
-   add_ribbons(ymin = ~Q3 , ymax = ~Max, fillcolor = "coral", opacity = .5, line = list(color = 'rgba(0, 0, 0, 0)'),
-               showlegend = FALSE) %>%
+   add_ribbons(ymin = ~Min, ymax = ~Q1 , fillcolor = "coral", opacity = .2, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE, hoverinfo = 'none') %>%
+   add_ribbons(ymin = ~Q1 , ymax = ~Q3 , fillcolor = "cyan" , opacity = .2, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE, hoverinfo = 'none')  %>%
+   add_ribbons(ymin = ~Q3 , ymax = ~Max, fillcolor = "coral", opacity = .2, line = list(color = 'rgba(0, 0, 0, 0)'),
+               showlegend = FALSE, hoverinfo = 'none') %>%
    add_trace(y = ~Min,    mode = 'lines', type = 'scatter', name = 'Min',
-             line = list(color = 'coral')) %>%
-   add_trace(y = ~Q1,     mode = 'lines', type = 'scatter', name = 'Q1',
-             line = list(color = 'cyan')) %>%
-   add_trace(y = ~Median, mode = 'lines', type = 'scatter', name = 'Median',
-             line = list(color = 'black')) %>%
-   add_trace(y = ~Q3,     mode = 'lines', type = 'scatter', name = 'Q3',
-             line = list(color = 'cyan')) %>%
+             line = list(color = 'coral', width = 2),
+             hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}')) %>%
+   add_trace(y = ~Q1,     mode = 'lines', type = 'scatter', name = '25th Quartile',
+             line = list(color = 'cyan',  width = 2),
+             hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}')) %>%
+   add_trace(y = ~Median, mode = 'lines', type = 'scatter', name = "Median ('79-'22)",
+             line = list(color = 'black', width = 2),
+             hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}')) %>%
+   add_trace(y = ~Q3,     mode = 'lines', type = 'scatter', name = '75th Quartile',
+             line = list(color = 'cyan',  width = 2),
+             hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}')) %>%
    add_trace(y = ~Max,    mode = 'lines', type = 'scatter', name = 'Max',
-             line = list(color = 'coral')) 
+             line = list(color = 'coral', width = 2), 
+             hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}') ) %>%
+   layout(title = "Lemhi River - L5 (USGS #13305310)", 
+          xaxis = list(title = list( text = "Date", size = 20)), 
+          yaxis = list(title = list( text = "Discharge (cfs)", size = 20)))
 
-  USGS_plotly_data_2 <- USGS_Stream_Data%>% 
-    mutate(date = USGS_Stream_Data$...1) %>%
-    filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
-    mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-    dplyr::select(real_date_2,"1996") %>%
-    arrange(real_date)
+
  
  
