@@ -22,6 +22,7 @@ library(shinycssloaders)
 library(gganimate)
 library(ggnewscale)
 library(zoo)
+library(randomcoloR)
 
 setwd(here())
 litz_locs        <- read_csv("Data/Litz_Locations.csv")
@@ -119,22 +120,16 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
  
  
  tabPanel(title = "Fish Movement", 
-
+         
+    dateRangeInput('daterange_fish_move','Select Date Range',
+                     start = "2022-01-01",
+                     end   = "2022-05-18",
+                     min   = as.Date(min(pittag_data_raw$min_det)),
+                     max   = as.Date(max(pittag_data_raw$min_det))),
    
-        plotlyOutput('Move_Fish', height = "80vh") %>%
-          withSpinner(color="#0dc5c1"),    
-        fluidRow(
-        column(6, 
-             dateRangeInput('daterange_fish_move','Select Date Range',
-                            start = "2022-01-01",
-                            end   = "2022-05-18",
-                            min   = as.Date(min(pittag_data_raw$min_det)),
-                            max   = as.Date(max(pittag_data_raw$min_det)))),
-        column(6,
-             uiOutput("dateslider_fish_move")
-            # dataTableOutput("poly_tables")
-      ) #end column 
-    ) #Fluid row within fish movement    
+        plotlyOutput('Move_Fish', height = "70vh", width = "70%") %>%
+          withSpinner(color="#0dc5c1")  
+       # dataTableOutput("poly_tables")
    ), #tabPanel "fish movement"
  
  tabPanel(title = "Lemhi River Discharge", 
@@ -149,17 +144,6 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
  ) #fluidPage
 
 server <- function(input,output,session){
-  
-  #UI Outputs -----  
-  output$dateslider_fish_move <- renderUI(
-    
-    sliderInput("Dateslider",
-                "Date:",
-                min = input$daterange_fish_move[1], 
-                max = input$daterange_fish_move[2], 
-                value=as.Date ("2022-01-01"),timeFormat="%Y-%m-%d", 
-                animate = TRUE)
-  )
   
 #Detection Data ----    
   output$bar_graph <- renderPlot({
