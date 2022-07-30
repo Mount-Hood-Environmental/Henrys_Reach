@@ -127,8 +127,9 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                      min   = "2022-05-01",
                      max   = "2022-05-12"),
    
-       div(plotlyOutput('Move_Fish', height = "70vh", width = "70%"), align = "center") %>%
-          withSpinner(color="#0dc5c1")  
+       div(plotlyOutput('Move_Fish', height = "70vh", width = "60%"),
+           align = "center") %>%
+       withSpinner(color="#0dc5c1") 
        # dataTableOutput("poly_tables")
    ), #tabPanel "fish movement"
  
