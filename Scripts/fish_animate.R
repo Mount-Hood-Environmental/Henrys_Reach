@@ -45,28 +45,42 @@ Fish_Move_Mock_Adv <- Fish_Move_Mock_Adv %>%
                ifelse(Location == "Lemhi 4",       median(HW_shp_lemhi[[4]][[6]][[1]][[1]][,2]-.0001),
                ifelse(Location == "Lemhi 2",       median(HW_shp_lemhi[[4]][[7]][[1]][[1]][,2]),0)))))))) %>% 
   select(new_date,Tag,Location,lng,lat,Frame) %>%
-  complete(Tag,Frame)
+  complete(Tag,new_date) %>%
+  filter(between(new_date,as.Date("2022-05-03"),as.Date("2022-05-09")))
 
 K <- ggplot() +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[1]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[1]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[2]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[2]][[1]][[1]][,2] ), color = "blue" , fill = "blue" , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[3]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[3]][[1]][[1]][,2] ), color = "blue" , fill = "blue" , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[4]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[4]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[5]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[5]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[6]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[6]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-  geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-  geom_point(data = Fish_Move_Mock_Adv, aes(x=lng, y=lat, color=Tag, frame = Frame), size = 3,
-             position = position_jitter(h=0.0001,w=0.0001)) + 
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[1]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[1]][[1]][[1]][,2], text = "Lemhi 1"),
+                color = "red"  , fill = "red"  , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[2]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[2]][[1]][[1]][,2], text = "Lower Heny's Reach Side Channel" ),
+                color = "blue" , fill = "blue" , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[3]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[3]][[1]][[1]][,2], text = "Upper Henr's Reach Side Channel "),
+                color = "blue" , fill = "blue" , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[4]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[4]][[1]][[1]][,2], text = "Lemhi 3"),
+                color = "red"  , fill = "red"  , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[5]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[5]][[1]][[1]][,2], text = "Lemhi 5"),
+                color = "red"  , fill = "red"  , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[6]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[6]][[1]][[1]][,2], text = "Lemhi 4"),
+                color = "red"  , fill = "red"  , alpha = .5) +
+  geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2], text = "Lemhi 2"),
+                color = "red"  , fill = "red"  , alpha = .5) +
+  geom_point(data = Fish_Move_Mock_Adv, 
+             aes(x=lng, y=lat, color=Tag, frame = format(new_date, "%b %d")),
+             size = 3, position = position_jitter(h=0.0002,w=0.0002)) + 
   labs(x="Longitude",y="Latitude")+
   theme(legend.position = "none")
 
 
- ggplotly(K) %>% 
-   animation_opts(1000) %>%
-   animation_slider(
-     currentvalue = list(prefix = "Day"))
+   ggplotly(K) %>% 
+   animation_opts(frame = 2000, 
+                  transition = 1500, 
+                  easing = 'quad') %>% 
+   animation_slider( currentvalue = list(prefix = "Date : " , 
+                     font = list(color = "black")))
  
- 
+
+
+    
+
  
    
 

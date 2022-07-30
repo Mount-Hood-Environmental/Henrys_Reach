@@ -122,12 +122,12 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
  tabPanel(title = "Fish Movement", 
          
     dateRangeInput('daterange_fish_move','Select Date Range',
-                     start = "2022-01-01",
-                     end   = "2022-05-18",
-                     min   = as.Date(min(pittag_data_raw$min_det)),
-                     max   = as.Date(max(pittag_data_raw$min_det))),
+                     start = "2022-05-03",
+                     end   = "2022-05-9",
+                     min   = "2022-05-01",
+                     max   = "2022-05-12"),
    
-        plotlyOutput('Move_Fish', height = "70vh", width = "70%") %>%
+       div(plotlyOutput('Move_Fish', height = "70vh", width = "70%"), align = "center") %>%
           withSpinner(color="#0dc5c1")  
        # dataTableOutput("poly_tables")
    ), #tabPanel "fish movement"
@@ -505,26 +505,37 @@ output$Move_Fish <- renderPlotly({
                  ifelse(Location == "Lemhi 4",       median(HW_shp_lemhi[[4]][[6]][[1]][[1]][,2]-.0001),
                  ifelse(Location == "Lemhi 2",       median(HW_shp_lemhi[[4]][[7]][[1]][[1]][,2]),0)))))))) %>% 
     select(new_date,Tag,Location,lng,lat,Frame) %>%
-    complete(Tag,Frame)
+    complete(Tag,new_date) %>%
+    filter(between(new_date,input$daterange_fish_move[1],input$daterange_fish_move[2]))
   
   K <- ggplot() +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[1]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[1]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[2]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[2]][[1]][[1]][,2] ), color = "blue" , fill = "blue" , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[3]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[3]][[1]][[1]][,2] ), color = "blue" , fill = "blue" , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[4]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[4]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[5]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[5]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[6]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[6]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-    geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2] ), color = "red"  , fill = "red"  , alpha = .5) +
-    geom_point(data = Fish_Move_Mock_Adv, aes(x=lng, y=lat, color=Tag, frame = Frame), size = 3,
-               position = position_jitter(h=0.0001,w=0.0001)) + 
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[1]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[1]][[1]][[1]][,2], text = "Lemhi 1"),
+                  color = "red"  , fill = "red"  , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[2]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[2]][[1]][[1]][,2], text = "Lower Heny's Reach Side Channel" ),
+                  color = "blue" , fill = "blue" , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[3]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[3]][[1]][[1]][,2], text = "Upper Henr's Reach Side Channel "),
+                  color = "blue" , fill = "blue" , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[4]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[4]][[1]][[1]][,2], text = "Lemhi 3"),
+                  color = "red"  , fill = "red"  , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[5]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[5]][[1]][[1]][,2], text = "Lemhi 5"),
+                  color = "red"  , fill = "red"  , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[6]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[6]][[1]][[1]][,2], text = "Lemhi 4"),
+                  color = "red"  , fill = "red"  , alpha = .5) +
+    geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2], text = "Lemhi 2"),
+                  color = "red"  , fill = "red"  , alpha = .5) +
+    geom_point(data = Fish_Move_Mock_Adv, 
+               aes(x=lng, y=lat, color=Tag, frame = format(new_date, "%b %d")),
+               size = 3, position = position_jitter(h=0.0002,w=0.0002)) + 
     labs(x="Longitude",y="Latitude")+
     theme(legend.position = "none")
   
   
   ggplotly(K) %>% 
-    animation_opts(1000) %>%
-    animation_slider(
-      currentvalue = list(prefix = "Day"))
+    animation_opts(frame = 2000, 
+                   transition = 1500, 
+                   easing = 'quad') %>% 
+    animation_slider( currentvalue = list(prefix = "Date : " , 
+                                          font = list(color = "black")))
   
   
 })
