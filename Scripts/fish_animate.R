@@ -73,7 +73,7 @@ K <- ggplot() +
    ggplotly(K) %>% 
    animation_opts(frame = 2000, 
                   transition = 1500, 
-                  easing = 'quad') %>% 
+                  easing = 'linear') %>% 
    animation_slider( currentvalue = list(prefix = "Date : " , 
                      font = list(color = "black")))
  
