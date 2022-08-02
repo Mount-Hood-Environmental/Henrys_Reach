@@ -3,6 +3,8 @@
 # Created: May 15th
 # Last Modified: August 1st
 
+
+
 # Load Packages and Data ------
 library(tidyverse)
 library(sf)
@@ -23,12 +25,15 @@ library(gganimate)
 library(ggnewscale)
 library(zoo)
 library(randomcoloR)
+#library(rphylopic)
+#library(ggimage)
 
 setwd(here())
 litz_locs        <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw  <- read_csv("Data/0LL_cleaned_nov_may")
 USGS_Stream_Data <- read_csv("Data/LemL5_Flow_WY.csv")
 Fish_Move_Mock_Adv <- read_csv("Data/Fish_Move_Mock_Data_Adv.csv")
+#steelhead_pic <- image_data("1df5b970-3302-4e5b-8df1-a3d9fb5744d3", size = 256)[[1]]
 
 
 #Low Resolution Ortho
@@ -66,9 +71,9 @@ channel_complex <- pittag_data_raw %>%
 # ui ----
 ui <- fluidPage(theme = shinytheme("spacelab"),
   titlePanel( 
-    fluidRow(column(width = 8, "Henry's Reach"), 
-             column(width = 2, tags$a(tags$img(src = "MHE_logo.jpg", height = 80, width = 190, align = "right"),  href="https://mthoodenvironmental.com/")),
-             column(width = 2, tags$a(tags$img(src = "Biomark_logo.png", height = 80, width = 180), href = "https://www.biomark.com/")))
+    fluidRow(column(width = 8, strong("Henry's Reach Complex - Lemhi River"), style = "font-size:40px;"), 
+             column(width = 2, tags$a(tags$img(src = "MHE_logo.jpg", height = 80, width = 220, align = "right"),  href="https://mthoodenvironmental.com/")),
+             column(width = 2, tags$a(tags$img(src = "Biomark_logo.png", height = 80, width = 220), href = "https://www.biomark.com/")))
             ), #Title Panel
    
        tabsetPanel(
@@ -103,7 +108,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
                                                                      selectedTextFormat = 'static', 
                                                                      noneSelectedText = "Lower Henry's Reach"))),
                                 ),  #fluidRow (select inputs)
-                        plotOutput('bar_graph', height = "70vh") %>% 
+                        plotlytOutput('bar_graph', height = "50vh") %>% 
                          withSpinner(color="#0dc5c1")
                    
                    ),
@@ -122,12 +127,12 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
  tabPanel(title = "Fish Movement", 
          
     dateRangeInput('daterange_fish_move','Select Date Range',
-                     start = "2022-05-03",
+                     start = "2022-05-01",
                      end   = "2022-05-9",
                      min   = "2022-05-01",
                      max   = "2022-05-12"),
    
-       div(plotlyOutput('Move_Fish', height = "70vh", width = "60%"),
+       div(plotlyOutput('Move_Fish', height = "70vh", width = "30%"),
            align = "center") %>%
        withSpinner(color="#0dc5c1") 
        # dataTableOutput("poly_tables")
@@ -173,7 +178,7 @@ server <- function(input,output,session){
       color_choices <- c("#3300CC", "#E69F00") 
     } else { color_choices <- c("00FFFF") }
       
-    ggplot(channel_complex %>%
+    q<-ggplot(channel_complex %>%
            filter(channel_complex$SC %in% c(input$Complex_1,input$Complex_2)) %>% 
            filter(between(as.Date(min_det),input$daterange[1],input$daterange[2])) %>%
            mutate(min_det_scaled = cut.POSIXt(min_det,input$time_frame)),
@@ -191,6 +196,7 @@ server <- function(input,output,session){
             title = element_text(size = 16, face = "bold")) + 
       scale_fill_manual(values = color_choices) 
    
+    ggplotly(q)
    
   })
 
@@ -505,7 +511,7 @@ output$Move_Fish <- renderPlotly({
                  ifelse(Location == "Lemhi 5",       median(HW_shp_lemhi[[4]][[5]][[1]][[1]][,2]),
                  ifelse(Location == "Lemhi 4",       median(HW_shp_lemhi[[4]][[6]][[1]][[1]][,2]-.0001),
                  ifelse(Location == "Lemhi 2",       median(HW_shp_lemhi[[4]][[7]][[1]][[1]][,2]),0)))))))) %>% 
-    select(new_date,Tag,Location,lng,lat,Frame) %>%
+    select(new_date,Tag,Location,lng,lat,Frame,Release) %>%
     complete(Tag,new_date) %>%
     filter(between(new_date,input$daterange_fish_move[1],input$daterange_fish_move[2]))
   
@@ -525,8 +531,9 @@ output$Move_Fish <- renderPlotly({
     geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2], text = "Lemhi 2"),
                   color = "red"  , fill = "red"  , alpha = .5) +
     geom_point(data = Fish_Move_Mock_Adv, 
-               aes(x=lng, y=lat, color=Tag, frame = format(new_date, "%b %d")),
+               aes(x=lng, y=lat, color=Release, frame = format(new_date, "%b %d")),
                size = 3, position = position_jitter(h=0.0002,w=0.0002)) + 
+    scale_colour_gradientn(colours = terrain.colors(10)) +
     labs(x="Longitude",y="Latitude")+
     theme(legend.position = "none")
   
