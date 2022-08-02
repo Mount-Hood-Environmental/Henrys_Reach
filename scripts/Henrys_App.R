@@ -498,7 +498,7 @@ server <- function(input,output,session){
 #GG Fish Move -------  
 output$Move_Fish <- renderPlotly({
   
-  Fish_Move_Mock_Adv <- Fish_Move_Mock_Adv %>%
+  Fish_Move_Mock_Adv_rev <- Fish_Move_Mock_Adv %>%
     mutate(new_date = as.Date(Date,"%m/%d/%Y")) %>%
     mutate(Frame = as.numeric(format(new_date, "%d")))%>%
     mutate(lng = ifelse(Location == "Lem 1 Release", median(HW_shp_lemhi[[4]][[1]][[1]][[1]][,1]),
@@ -535,10 +535,9 @@ output$Move_Fish <- renderPlotly({
                   color = "red"  , fill = "red"  , alpha = .5) +
     geom_polygon( aes( x = HW_shp_lemhi[[4]][[7]][[1]][[1]][,1], y = HW_shp_lemhi[[4]][[7]][[1]][[1]][,2], text = "Lemhi 2"),
                   color = "red"  , fill = "red"  , alpha = .5) +
-    geom_point(data = Fish_Move_Mock_Adv, 
-               aes(x=lng, y=lat, color=Release, frame = format(new_date, "%b %d")),
-               size = 3, position = position_jitter(h=0.0002,w=0.0002)) + 
-    scale_colour_gradientn(colours = terrain.colors(10)) +
+    geom_point(data = Fish_Move_Mock_Adv_rev, 
+               aes(x=lng, y=lat, color=Tag, frame = format(new_date, "%b %d")),
+               size = 3, shape=21, fill=Fish_Move_Mock_Adv_rev$Release,  position = position_jitter(h=0.0002,w=0.0002)) + 
     labs(x="Longitude",y="Latitude")+
     theme(legend.position = "none")
   
