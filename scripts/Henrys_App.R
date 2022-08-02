@@ -4,8 +4,13 @@
 # Last Modified: August 1st
 
 
+# Install shiny and restart RStudio if this is the first time running a shiny app. After that, I believe shiny
+# will automatically install all the other necessary packages when you launch the app with the "Run App" button.
+
+#install.packages("shiny") 
 
 # Load Packages and Data ------
+library(shiny)
 library(tidyverse)
 library(sf)
 library(mapview)
@@ -37,7 +42,7 @@ Fish_Move_Mock_Adv <- read_csv("Data/Fish_Move_Mock_Data_Adv.csv")
 
 
 #Low Resolution Ortho
-ortho_resolution <- 10
+#ortho_resolution <- 10
 #High Resolution Ortho 
 ortho_resolution <- 3
 
