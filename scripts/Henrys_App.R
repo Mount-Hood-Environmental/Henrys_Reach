@@ -1,6 +1,6 @@
 # Authors: Bridger Bertram
 # Purpose:  Pit Tag Data visualization of Henry's Reach Project. Lemhi River, Idaho
-# Created: May 15th
+# Created: May 15th, 2022
 # Last Modified: August 1st
 
 
