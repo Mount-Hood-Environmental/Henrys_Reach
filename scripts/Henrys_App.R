@@ -36,7 +36,7 @@ library(randomcoloR)
 setwd(here())
 litz_locs        <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw  <- read_csv("Data/0LL_cleaned_nov_may")
-USGS_Stream_Data <- read_csv("Data/LemL5_Flow_WY.csv")
+USGS_Stream_Data <- read_csv("Data/LemL5_Flow_JY.csv")
 Fish_Move_Mock_Adv <- read_csv("Data/Fish_Move_Mock_Data_Adv.csv")
 #steelhead_pic <- image_data("1df5b970-3302-4e5b-8df1-a3d9fb5744d3", size = 256)[[1]] #trying to make the movement icons fish silhouette 
 
@@ -144,7 +144,7 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
    ), #tabPanel "fish movement"
  
  tabPanel(title = "Lemhi River Discharge", 
-    pickerInput("year", label = NULL, choices = c(as.character(seq(2022,1979,-1))), multiple = TRUE, 
+    pickerInput("year", label = NULL, choices = c(as.character(seq(2022,1993,-1))), multiple = TRUE, 
                 options = pickerOptions(actionsBox = TRUE, 
                                         selectedTextFormat = 'static', 
                                         noneSelectedText = "Select Years")),
@@ -449,10 +449,10 @@ server <- function(input,output,session){
       mutate(date = USGS_Stream_Data$...1) %>%
       filter(!date %in% c("Min","Q1","Median","Q3","Max")) %>%
       mutate(real_date = as.Date(date,format = "%b-%d")) %>%
-      dplyr::select(real_date,Min,Q1,Median,Q3,Max,input$year) %>%
+      dplyr::select(real_date,Min,Q1,Median,Q3,Max,input$year)%>%
       arrange(real_date)
     
-    USGS_plotly_data<- na.locf(USGS_plotly_data)
+#    USGS_plotly_data<- na.locf(USGS_plotly_data)
     line_pal <- randomColor(100, luminosity="bright")
     if (is.null(input$year) == FALSE) {
       ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)
@@ -461,10 +461,11 @@ server <- function(input,output,session){
         ploty_cfs <- add_trace(ploty_cfs, y = pull(USGS_plotly_data,input$year[i]),
                      type = 'scatter',
                      mode = 'lines', 
-                     name = input$year[i], 
+                     name = input$year[i],
                      line = list(color = line_pal[i], 
                             width = 4),
-                     hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}')) 
+                     hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}'),
+                     connectgaps = FALSE) 
         
       }}else{ploty_cfs <- plot_ly(data = USGS_plotly_data, x = ~real_date)}
   
