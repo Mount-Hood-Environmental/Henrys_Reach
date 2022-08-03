@@ -36,7 +36,7 @@ library(randomcoloR)
 setwd(here())
 litz_locs        <- read_csv("Data/Litz_Locations.csv")
 pittag_data_raw  <- read_csv("Data/0LL_cleaned_nov_may")
-USGS_Stream_Data <- read_csv("Data/LemL5_Flow_JY.csv")
+USGS_Stream_Data <- read_csv("Data/LemUP_Flow_JY.csv")
 Fish_Move_Mock_Adv <- read_csv("Data/Fish_Move_Mock_Data_Adv.csv")
 #steelhead_pic <- image_data("1df5b970-3302-4e5b-8df1-a3d9fb5744d3", size = 256)[[1]] #trying to make the movement icons fish silhouette 
 
@@ -491,7 +491,7 @@ server <- function(input,output,session){
       add_trace(y = ~Max,    mode = 'lines', type = 'scatter', name = 'Max',
                 line = list(color = 'coral', width = 2), 
                 hovertemplate = paste('%{x|%b,%d}  <i>cfs</i>: %{y}') ) %>%
-      layout(title = "Lemhi River - L5 (USGS #13305310)", 
+      layout(title = "Lemhi River near Lemhi,ID (USGS #1330500)", 
              xaxis = list(title = list( text = "Date", size = 25)), 
              yaxis = list(title = list( text = "Discharge (cfs)", size = 25)))
   })
